@@ -1,0 +1,86 @@
+Documentation:
+  CommentFormat: Doxygen
+
+CompileFlags:
+  Add:
+    - "-std=c++20"
+    - "-Wno-c23-extensions"
+  CompilationDatabase: build/
+
+Completion:
+  AllScopes: true
+
+Hover:
+  ShowAKA: true
+
+Diagnostics:
+  ClangTidy:
+    FastCheckFilter: Loose
+    Add: [
+      # 检查命名
+      readability-identifier-naming,
+      # 检测缩进与代码逻辑结构不符
+      readability-misleading-indentation,
+      # 识别范围for循环中不必要的拷贝，并建议使用引用或const引用来代替
+      performance-for-range-copy,
+      # 识别并引导使用容器自身算法而非通用算法
+      performance-inefficient-algorithm,
+      # 检测范围for循环中，因类型不匹配导致隐式类型转换
+      performance-implicit-conversion-in-loop,
+      # C++ Core Guidelines的检查集合
+      cppcoreguidelines-avoid-magic-numbers,
+      cppcoreguidelines-owning-memory,
+      #
+      readability-qualified-auto,
+      readability-container-size-empty,
+      readability-redundant-*,
+      readability-simplify-boolean-expr,
+
+      clang-analyzer-*
+      ]
+    
+
+    CheckOptions:
+
+      # 命名规范
+
+      readability-identifier-naming.EnumCase: CamelCase  # 枚举名使用 PascalCase
+      readability-identifier-naming.ClassCase: CamelCase # 类名使用 PascalCase
+      readability-identifier-naming.ConstantCase: UPPER_CASE # 常量名使用 UPPER_CASE
+      readability-identifier-naming.EnumConstantCase: UPPER_CASE # 枚举成员使用 UPPER_CASE
+      readability-identifier-naming.VariableCase: lower_case # 变量名使用 snake_case
+      readability-identifier-naming.ClassMemberCase: lower_case # 类变量名使用 snake_case
+      readability-identifier-naming.FunctionCase: lower_case # 函数名使用 snake_case
+      readability-identifier-naming.ParameterCase: lower_case # 函数参数使用 snake_case
+      readability-identifier-naming.PrivateMemberSuffix: _ # 私有成员后缀
+      readability-identifier-naming.ProtectedMemberSuffix: _ # 保护成员后缀
+
+      # 循环
+
+      modernize-loop-convert.MinConfidence: safe # 只在安全情况下将c风格for转换为C++11风格for
+
+      #
+
+      modernize-use-default-member-init.UseAssignment: true # 在成员变量中使用=而非{}初始化
+
+      #
+
+      modernize-use-transparent-functors.SafeMode: true
+
+      #
+
+      bugprone-narrowing-conversions.PedanticMode: false
+      bugprone-narrowing-conversions.IgnoreConversionFromTypes: "size_t;ptrdiff_t"
+      bugprone-suspicious-include.Language: "Cpp"
+      bugprone-unchecked-optional-access.Regex: "get|at"
+
+      #
+
+      cppcoreguidelines-avoid-magic-numbers.IgnoreAllFloatingValues: true
+      cppcoreguidelines-avoid-magic-numbers.IgnoredIntegerValues: "0;1;2;3;4;-1"
+      cppcoreguidelines-macro-usage.AllowedUses: "header_guard;namespace_lowercase"
+
+      #
+
+      misc-throw-by-value-catch-by-reference.CheckThrowTemporaries : true
+      readability-redundant-access-specifiers.CheckFirstDeclaration: false
