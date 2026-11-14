@@ -1,1 +1,108 @@
-Checks: 'clang-analyzer-*'
+Checks: >
+  -*,
+  clang-diagnostic-*,
+  clang-analyzer-*,
+  bugprone-*,
+  cppcoreguidelines-*,
+  misc-*,
+  modernize-*,
+  performance-*,
+  portability-*,
+  readability-*,
+  -bugprone-easily-swappable-parameters,
+  -bugprone-unchecked-optional-access,
+  -bugprone-narrowing-conversions,
+  -bugprone-implicit-widening-of-multiplication-result,
+  -bugprone-exception-escape,
+  -bugprone-macro-parentheses,
+  -bugprone-reserved-identifier,
+  -bugprone-use-after-move,
+  -bugprone-throw-keyword-missing,
+  -bugprone-chained-comparison,
+  -bugprone-suspicious-include,
+  -bugprone-unused-return-value,
+  -bugprone-argument-comment,
+  -bugprone-sizeof-expression,
+  -bugprone-signal-handler,
+  -bugprone-dynamic-static-initializers,
+  -bugprone-switch-missing-default-case,
+  -bugprone-non-zero-enum-to-bool-conversion,
+  -bugprone-unsafe-functions,
+  -bugprone-not-null-terminated-result,
+  -modernize-use-trailing-return-type,
+  -modernize-avoid-c-arrays,
+  -modernize-use-std-print,
+  -modernize-use-std-format,
+  -modernize-return-braced-init-list,
+  -modernize-use-nodiscard,
+  -performance-enum-size,
+  -readability-identifier-naming,
+  -readability-identifier-length,
+  -readability-braces-around-statements,
+  -readability-else-after-return,
+  -readability-magic-numbers,
+  -readability-implicit-bool-conversion,
+  -readability-isolate-declaration,
+  -readability-named-parameter,
+  -readability-static-accessed-through-instance,
+  -readability-avoid-const-params-in-decls,
+  -readability-redundant-access-specifiers,
+  -readability-avoid-return-with-void-value,
+  -readability-qualified-auto,
+  -readability-redundant-parentheses,
+  -readability-suspicious-call-argument,
+  -readability-operators-representation,
+  -readability-avoid-unconditional-preprocessor-if,
+  -misc-include-cleaner,
+  -misc-const-correctness,
+  -misc-no-recursion,
+  -misc-non-private-member-variables-in-classes,
+  -misc-unused-parameters,
+  -misc-use-anonymous-namespace,
+  -misc-confusable-identifiers,
+  -misc-misleading-bidirectional,
+  -cppcoreguidelines-pro-bounds-pointer-arithmetic,
+  -cppcoreguidelines-pro-bounds-array-to-pointer-decay,
+  -cppcoreguidelines-pro-bounds-constant-array-index,
+  -cppcoreguidelines-pro-bounds-avoid-unchecked-container-access,
+  -cppcoreguidelines-pro-type-vararg,
+  -cppcoreguidelines-pro-type-reinterpret-cast,
+  -cppcoreguidelines-pro-type-union-access,
+  -cppcoreguidelines-pro-type-const-cast,
+  -cppcoreguidelines-avoid-c-arrays,
+  -cppcoreguidelines-avoid-magic-numbers,
+  -cppcoreguidelines-macro-usage,
+  -cppcoreguidelines-avoid-do-while,
+  -cppcoreguidelines-avoid-non-const-global-variables,
+  -cppcoreguidelines-avoid-const-or-ref-data-members,
+  -cppcoreguidelines-non-private-member-variables-in-classes
+
+HeaderFilterRegex: ''
+WarningsAsErrors: ''
+FormatStyle:     none
+SystemHeaders:   false
+
+CheckOptions:
+  - key:   modernize-use-auto.MinTypeNameLength
+    value: '5'
+  - key:   modernize-use-auto.RemoveStars
+    value: 'false'
+  - key:   modernize-loop-convert.MinConfidence
+    value: reasonable
+  - key:   modernize-loop-convert.MaxCopySize
+    value: '16'
+  - key:   modernize-use-nullptr.NullMacros
+    value: 'NULL'
+  - key:   modernize-pass-by-value.IncludeStyle
+    value: llvm
+  - key:   readability-function-cognitive-complexity.Threshold
+    value: '25'
+  - key:   readability-function-size.LineThreshold
+    value: '200'
+  - key:   readability-function-size.StatementThreshold
+    value: '200'
+  - key:   readability-function-size.NestingThreshold
+    value: '6'
+  - key:   cppcoreguidelines-special-member-functions.AllowSoleDefaultDtor
+    value: 'true'
+...
