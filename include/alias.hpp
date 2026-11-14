@@ -9,6 +9,7 @@
  */
 
 /// @note For std::int8_t, std::int16_t, ..., std::uint8_t, std::uint16_t
+#include <cstddef>
 #include <cstdint>
 
 /// @note For template std::atomic<T>
@@ -38,4 +39,7 @@ namespace atomic {
     using u16 = std::atomic<u16>;
     using u32 = std::atomic<u32>;
     using u64 = std::atomic<u64>;
+
+    using size_t = std::atomic_size_t;
+    using flag = std::atomic_flag;
 }
