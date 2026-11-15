@@ -63,6 +63,11 @@ target_link_libraries(CoucurrentCpp PRIVATE
     benchmark::benchmark_main
 )
 
+if(NOT MSVC)
+    target_link_libraries(CoucurrentCpp PRIVATE atomic)
+endif()
+
+
 if(MSVC)
     target_compile_options(CoucurrentCpp PRIVATE /W4 /Zc:preprocessor)
 else()

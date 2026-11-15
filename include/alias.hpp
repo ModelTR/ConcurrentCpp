@@ -15,6 +15,7 @@
 /// @note For template std::atomic<T>
 #include <atomic>
 
+
 /// Signed intergal
 using i8 = std::int8_t;
 using i16 = std::int16_t;
@@ -43,3 +44,5 @@ namespace atomic {
     using size_t = std::atomic_size_t;
     using flag = std::atomic_flag;
 }
+
+using memorder = std::memory_order;

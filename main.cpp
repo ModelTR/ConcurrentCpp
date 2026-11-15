@@ -8,7 +8,7 @@
  *
  */
 
- /// @todo Sorting the order of output stream message for debugging
+/// @todo Sorting the order of output stream message for debugging
 
 #include <chrono>
 #include <cstddef>
@@ -46,9 +46,7 @@ auto main() -> int {
 		concur::inplace_vector<std::function<void(int)>, 2> fns;
 		concur::inplace_vector<std::jthread, THREAD_NUMS> threads;
 
-		concur::Stack<int, CAPACITY> stack{1, 2, 3, 4, 5};
-
-		rd.shuffle(stack.data());
+		concur::LockFreeStack<int, CAPACITY> stack{1, 2, 3, 4, 5};
 
 		fns.push_back([&stack](int x) {
 			if (stack.push(x)) {
@@ -57,9 +55,15 @@ auto main() -> int {
 			}
 		});
 		fns.push_back([&stack](int) {
-			std::cout << std::format("[{}] : pop {}\n",
-									 std::chrono::system_clock::now(),
-									 stack.pop());
+			auto res = stack.pop();
+			if (res.has_value()) {
+				std::cout << std::format("[{}] : pop {}\n",
+										 std::chrono::system_clock::now(),
+										 res.value());
+			} else {
+				std::cout << std::format("[{}] : poping falied\n",
+										 std::chrono::system_clock::now());
+			}
 		});
 
 		stack.print();
