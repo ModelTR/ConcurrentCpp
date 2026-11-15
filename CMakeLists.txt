@@ -74,3 +74,24 @@ else()
     target_compile_options(CoucurrentCpp PRIVATE
         -Wall -Wextra)
 endif()
+
+# Benchmark
+
+find_package(Threads REQUIRED)
+
+add_executable(ConcurrentBench benchmark/benchmark.cpp)
+target_include_directories(ConcurrentBench PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/benchmark
+)
+target_link_libraries(ConcurrentBench PRIVATE
+    benchmark::benchmark
+    Threads::Threads
+)
+
+if(NOT MSVC)
+    target_compile_options(ConcurrentBench PRIVATE -Wall -Wextra)
+    target_link_libraries(ConcurrentBench PRIVATE atomic)
+else()
+    target_compile_options(ConcurrentBench PRIVATE /W4 /Zc:preprocessor)
+endif()

@@ -9,6 +9,8 @@
  *
  */
 
+#pragma once
+
 #include "alias.hpp"
 #include "backoff.hpp"
 #include "inplace_vector.hpp"
@@ -27,6 +29,8 @@
 #include <mutex>
 #include <new>
 #include <optional>
+#include <stdexcept>
+#include <thread>
 #include <utility>
 
 namespace concur {
@@ -42,27 +46,32 @@ public:
 	using scoped_lock = std::scoped_lock<std::mutex>;
 
 	struct Current {
-		std::mutex cur_mt_;
+		mutable std::mutex cur_mt_;
 		int idx = -1;
 	};
 
 	constexpr Stack(std::initializer_list<value_type> elems)
-		: current_({}, elems.size() - 1), size_(elems.size()), elems_(elems) {}
-	constexpr Stack(const size_type n, const value_type &elem) : size_(n) {
-		static_assert(n <= capacity_, "Too many elems to initialize stack");
+		: current_({}, static_cast<int>(elems.size()) - 1), size_(elems.size()),
+		  elems_(elems) {}
+	Stack(const size_type n, const value_type &elem) : size_(n) {
+		if (n > capacity_) {
+			throw std::length_error{"Too many elems to initialize stack"};
+		}
 		if (n != 0) {
 			elems_.fill(n, elem);
-			current_.idx = n - 1;
+			current_.idx = static_cast<int>(n) - 1;
 		}
 	}
-	constexpr Stack() : size_(N) { elems_.fill(N); }
+	constexpr Stack() : size_(0) {}
 
 	auto push(value_type &&elem) -> bool {
 		while (true) {
 			if (try_push(std::move(elem))) {
+				bk_.reset();
 				return true;
-			} else {
-				bk_.backoff();
+			}
+			if (!bk_.backoff()) {
+				return false;
 			}
 		}
 	}
@@ -70,11 +79,11 @@ public:
 	auto push(const value_type &elem) -> bool {
 		while (true) {
 			if (try_push(elem)) {
+				bk_.reset();
 				return true;
-			} else {
-				if (!bk_.backoff()) {
-					return false;
-				}
+			}
+			if (!bk_.backoff()) {
+				return false;
 			}
 		}
 	}
@@ -83,11 +92,11 @@ public:
 		value_type res;
 		while (true) {
 			if (try_pop(res)) {
+				bk_.reset();
 				return res;
-			} else {
-				if (!bk_.backoff()) {
-					return std::nullopt;
-				}
+			}
+			if (!bk_.backoff()) {
+				return std::nullopt;
 			}
 		}
 	}
@@ -99,7 +108,7 @@ public:
 
 	auto empty() -> bool {
 		scoped_lock sl{current_.cur_mt_};
-		return current_ == bottom_;
+		return current_.idx == bottom_;
 	}
 	constexpr auto capacity() const -> size_t { return capacity_; }
 
@@ -179,61 +188,67 @@ public:
 
 	LockFreeStack() noexcept {
 		for (u32 i = 0; i + 1 < capacity_; ++i)
-			next_[i].store(i + 1);
-		next_[capacity_ - 1].store(NULL_IDX);
+			next_[i].value.store(i + 1, memorder::relaxed);
+		next_[capacity_ - 1].value.store(NULL_IDX, memorder::relaxed);
 
-		free_top_.store({.idx = 0, .tag = 0});
-		data_top_.store({.idx = NULL_IDX, .tag = 0});
+		free_top_.store(pack(0, 0));
+		data_top_.store(pack(NULL_IDX, 0));
+		size_.store(0, memorder::relaxed);
 	}
 
-	LockFreeStack(const std::initializer_list<value_type> &il) noexcept {
+	LockFreeStack(const std::initializer_list<value_type> &il)
+		: size_(il.size()) {
+		static_assert(std::atomic<u64>::is_always_lock_free,
+					  "free_top_/data_top_ must be lock-free for this design");
+		if (il.size() > capacity_) {
+			throw std::length_error{"Too many elems to initialize stack"};
+		}
 		const u32 n = static_cast<u32>(il.size());
 		for (u32 i = 0; const auto &value : il) {
 			std::construct_at(slot_ptr(i++), value);
 		}
 		if (n > 0) {
-			next_[0].store(NULL_IDX, memorder::relaxed);
+			next_[0].value.store(NULL_IDX, memorder::relaxed);
 			for (u32 i = 1; i < n; i++) {
-				next_[i].store(i - 1, memorder::relaxed);
+				next_[i].value.store(i - 1, memorder::relaxed);
 			}
 		}
 
 		for (u32 i = n; i + 1 < capacity_; i++) {
-			next_[i].store(i + 1, memorder::relaxed);
+			next_[i].value.store(i + 1, memorder::relaxed);
 		}
 		if (n < capacity_) {
-			next_[capacity_ - 1].store(NULL_IDX, memorder::relaxed);
+			next_[capacity_ - 1].value.store(NULL_IDX, memorder::relaxed);
 		}
 
-		free_top_.store({.idx = n < capacity_ ? n : NULL_IDX, .tag = 0},
-						memorder::relaxed);
-		data_top_.store({.idx = n > 0 ? n - 1 : NULL_IDX, .tag = 0},
-						memorder::relaxed);
+		free_top_.store(pack(n < capacity_ ? n : NULL_IDX, 0));
+		data_top_.store(pack(n > 0 ? n - 1 : NULL_IDX, 0));
 	}
 
-	LockFreeStack(const size_type n, const value_type &value) {
+	LockFreeStack(const size_type n, const value_type &value) : size_(n) {
+		if (n > capacity_) {
+			throw std::length_error{"Too many elems to initialize stack"};
+		}
 		const u32 n_ = static_cast<u32>(n);
-		for (u32 i = 0; i < n; i++) {
+		for (u32 i = 0; i < n_; i++) {
 			std::construct_at(slot_ptr(i), value);
 		}
 		if (n_ > 0) {
-			next_[0].store(NULL_IDX, memorder::relaxed);
+			next_[0].value.store(NULL_IDX, memorder::relaxed);
 			for (u32 i = 1; i < n_; i++) {
-				next_[i].store(i - 1, memorder::relaxed);
+				next_[i].value.store(i - 1, memorder::relaxed);
 			}
 		}
 
 		for (u32 i = n_; i + 1 < capacity_; i++) {
-			next_[i].store(i - 1, memorder::relaxed);
+			next_[i].value.store(i + 1, memorder::relaxed);
 		}
 
 		if (n_ < capacity_) {
-			next_[capacity_ - 1].store(NULL_IDX, memorder::relaxed);
+			next_[capacity_ - 1].value.store(NULL_IDX, memorder::relaxed);
 		}
-		free_top_.store({.idx = n_ < capacity_ ? n : NULL_IDX, .tag = 0},
-						memorder::relaxed);
-		data_top_.store({.idx = n_ > 0 ? n - 1 : NULL_IDX, .tag = 0},
-						memorder::relaxed);
+		free_top_.store(pack(n_ < capacity_ ? n_ : NULL_IDX, 0));
+		data_top_.store(pack(n_ > 0 ? n_ - 1 : NULL_IDX, 0));
 	}
 
 	LockFreeStack(const LockFreeStack &) = delete;
@@ -242,49 +257,54 @@ public:
 	auto operator=(LockFreeStack &&) -> LockFreeStack & = delete;
 
 	~LockFreeStack() noexcept {
-		u32 idx = data_top_.load(memorder::relaxed).idx;
+		u32 idx = idx_of(data_top_.load(memorder::relaxed));
 		while (idx != NULL_IDX) {
-			u32 next = next_[idx].load(memorder::relaxed);
+			u32 next = next_[idx].value.load(memorder::relaxed);
 			slot_ptr(idx)->~T();
 			idx = next;
 		}
 	}
 
-	/// @brief Try pushing a value continuously until reaching backoff limit.
+	/// @brief
+	/// A failed CAS is contention, not a full stack: only report failure when
+	/// the free list really is empty.
 	auto push(const value_type &value) -> bool {
 		while (true) {
 			if (try_push(value)) {
 				return true;
-			} else {
-				if (!bk_.backoff()) {
-					return false;
-				}
 			}
+			if (idx_of(free_top_.load(memorder::acquire)) == NULL_IDX) {
+				return false;
+			}
+			std::this_thread::yield();
 		}
 	}
 
 	/// @brief Try poping a value continuously until reaching backoff limit.
 	/// @return Return a value while try poping successfully, or return a
 	/// std::nullopt.
+	///
+	/// As with push(): a failed CAS means contention, not an empty stack.
 	[[nodiscard]] auto pop() -> std::optional<value_type> {
 		value_type res;
 		while (true) {
 			if (try_pop(res)) {
 				return res;
-			} else {
-				if (!bk_.backoff()) {
-					return std::nullopt;
-				}
 			}
+			if (idx_of(data_top_.load(memorder::acquire)) == NULL_IDX) {
+				return std::nullopt;
+			}
+			std::this_thread::yield();
 		}
 	}
 
 	/// @attention This function is for debugging
 	auto print() -> void {
-		u32 idx = data_top_.load().idx;
-		std::cout << std::format("Stack's Size: {}\n", idx + 1);
+		const size_type n = size();
+		std::cout << std::format("Stack's Size: {}\n", n);
+		u32 idx = idx_of(data_top_.load(memorder::acquire));
 		while (idx != NULL_IDX) {
-			u32 next = next_[idx].load();
+			u32 next = next_[idx].value.load(memorder::relaxed);
 			std::cout << std::format("<{}> - [{}]\n", idx, *slot_ptr(idx));
 			idx = next;
 		}
@@ -292,11 +312,19 @@ public:
 
 	constexpr auto capacity() const -> size_type { return capacity_; }
 
-	auto size() const -> size_type {
-		return static_cast<size_type>(data_top_.load().idx - 1);
-	}
+	auto size() const -> size_type { return size_.load(memorder::acquire); }
 
 private:
+	static constexpr u64 pack(u32 idx, u32 tag) noexcept {
+		return (static_cast<u64>(tag) << 32) | static_cast<u64>(idx);
+	}
+	static constexpr u32 idx_of(u64 v) noexcept {
+		return static_cast<u32>(v & 0xFFFFFFFFULL);
+	}
+	static constexpr u32 tag_of(u64 v) noexcept {
+		return static_cast<u32>(v >> 32);
+	}
+
 	/// @attention Using reinterpret_cast convert byte * to T * which is
 	/// langer need std::launder
 	auto slot_ptr(u32 idx) noexcept -> pointer {
@@ -312,48 +340,49 @@ private:
 	/// free slot, and next_[data_top_] record the next data slot below
 	/// top.While excuting from step1 to step3. try_push update the free_top_ to
 	/// next free slot, and data_top_ to next data slot, changing the free slot
-	/// into data slot through next_[slot] = old_data.idx;
+	/// into data slot through next_[slot] = old_data.idx
 	auto try_push(const value_type &value) -> bool {
-		TaggedIdx old_free = free_top_.load(memorder::acquire);
-		TaggedIdx new_free;
+		u64 old_free = free_top_.load(memorder::acquire);
+		u64 new_free = 0;
 		u32 slot = 0;
 
 		do {
-			slot = old_free.idx;
+			slot = idx_of(old_free);
 			if (slot == NULL_IDX) {
 				return false;
 			}
-			u32 below = next_[slot].load(memorder::acquire);
-			new_free = {.idx = below, .tag = old_free.tag + 1};
+			u32 below = next_[slot].value.load(memorder::acquire);
+			new_free = pack(below, tag_of(old_free) + 1);
 		} while (!free_top_.compare_exchange_strong(
 			old_free, new_free, memorder::acq_rel, memorder::acquire));
 
 		std::construct_at(slot_ptr(slot), value);
 
-		TaggedIdx old_data = data_top_.load(memorder::acquire);
-		TaggedIdx new_data;
+		u64 old_data = data_top_.load(memorder::acquire);
+		u64 new_data = 0;
 
 		do {
-			next_[slot].store(old_data.idx, memorder::relaxed);
-			new_data = {.idx = slot, .tag = old_data.tag + 1};
+			next_[slot].value.store(idx_of(old_data), memorder::relaxed);
+			new_data = pack(slot, tag_of(old_data) + 1);
 		} while (!data_top_.compare_exchange_strong(
 			old_data, new_data, memorder::acq_rel, memorder::relaxed));
+		size_.fetch_add(1, memorder::relaxed);
 		return true;
 	}
 
 	/// @brief try_pop is symmetrical with try_push
 	[[nodiscard]] auto try_pop(value_type &res) -> bool {
-		TaggedIdx old_data = data_top_.load(memorder::acquire);
-		TaggedIdx new_data;
+		u64 old_data = data_top_.load(memorder::acquire);
+		u64 new_data = 0;
 		u32 slot = 0;
 
 		do {
-			slot = old_data.idx;
+			slot = idx_of(old_data);
 			if (slot == NULL_IDX) {
 				return false;
 			}
-			u32 below = next_[slot].load(memorder::relaxed);
-			new_data = {.idx = below, .tag = old_data.tag + 1};
+			u32 below = next_[slot].value.load(memorder::relaxed);
+			new_data = pack(below, tag_of(old_data) + 1);
 		} while (!data_top_.compare_exchange_strong(
 			old_data, new_data, memorder::acq_rel, memorder::acquire));
 
@@ -361,39 +390,35 @@ private:
 		res = std::move(*slot_address);
 		std::destroy_at(slot_address);
 
-		TaggedIdx old_free = free_top_.load(memorder::acquire);
-		TaggedIdx new_free;
+		u64 old_free = free_top_.load(memorder::acquire);
+		u64 new_free = 0;
 
 		do {
-			next_[slot].store(old_free.idx, memorder::relaxed);
-			new_free = {.idx = slot, .tag = old_free.tag + 1};
+			next_[slot].value.store(idx_of(old_free), memorder::relaxed);
+			new_free = pack(slot, tag_of(old_free) + 1);
 		} while (!free_top_.compare_exchange_strong(
 			old_free, new_free, memorder::acq_rel, memorder::relaxed));
+		size_.fetch_sub(1, memorder::relaxed);
 		return true;
 	}
 
 private:
 	static constexpr u32 NULL_IDX = std::numeric_limits<u32>::max();
 
-	struct TaggedIdx {
-		u32 idx = NULL_IDX;
-		u32 tag{0};
-
-		friend auto operator==(const TaggedIdx &lv,
-							   const TaggedIdx &rv) noexcept -> bool {
-			return (lv.idx == rv.idx) && (lv.tag == rv.tag);
-		}
+	struct alignas(std::hardware_destructive_interference_size) PaddedIndex {
+		std::atomic<u32> value{NULL_IDX};
 	};
 
 	constexpr static size_type capacity_ = N;
 
-	std::array<std::atomic<u32>, N> next_;
-	alignas(64) std::atomic<TaggedIdx> free_top_;
-	alignas(64) std::atomic<TaggedIdx> data_top_;
+	std::array<PaddedIndex, N> next_;
+	alignas(
+		std::hardware_destructive_interference_size) std::atomic<u64> free_top_;
+	alignas(
+		std::hardware_destructive_interference_size) std::atomic<u64> data_top_;
+	alignas(std::hardware_destructive_interference_size)
+		std::atomic<size_type> size_{0};
 	alignas(T) std::array<std::byte, capacity_ * sizeof(T)> storage_;
-
-	std::mutex mt_;
-	details::Backoff bk_{1000, 5, 5};
 };
 
 } // namespace concur

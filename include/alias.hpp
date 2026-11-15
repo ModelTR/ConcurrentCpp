@@ -9,7 +9,6 @@
  */
 
 /// @note For std::int8_t, std::int16_t, ..., std::uint8_t, std::uint16_t
-#include <cstddef>
 #include <cstdint>
 
 /// @note For template std::atomic<T>
