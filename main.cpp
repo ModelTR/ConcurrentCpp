@@ -46,7 +46,7 @@ auto main() -> int {
 		concur::inplace_vector<std::function<void(int)>, 2> fns;
 		concur::inplace_vector<std::jthread, THREAD_NUMS> threads;
 
-		concur::LockFreeStack<int, CAPACITY> stack{1, 2, 3, 4, 5};
+		concur::ElimiBackoffStack<int, CAPACITY> stack{1, 2, 3, 4, 5};
 
 		fns.push_back([&stack](int x) {
 			if (stack.push(x)) {

@@ -27,6 +27,10 @@ using u16 = std::uint16_t;
 using u32 = std::uint32_t;
 using u64 = std::uint64_t;
 
+/// Other
+
+using uintptr = std::uintptr_t;
+
 /// Atomic signed and unsigned intergal
 namespace atomic {
 
@@ -42,6 +46,7 @@ namespace atomic {
 
     using size_t = std::atomic_size_t;
     using flag = std::atomic_flag;
+    using uintptr = std::atomic_uintptr_t;
 }
 
 using memorder = std::memory_order;

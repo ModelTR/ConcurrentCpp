@@ -3,6 +3,9 @@
 // This header is the "batteries included" layer:
 //
 //   rng::stream<Engine>      one object with uniform/coin/normal/pick/shuffle
+//   rng::synchronized_stream mutex-protected, safe to share between threads
+//   rng::thread_rng          one entropy-seeded stream per thread
+//   rng::random_int          ready-to-use thread-local helpers
 //   rng::uniform_int         unbiased inclusive integer ranges
 //   rng::uniform_real        half-open floating-point ranges
 //   rng::bernoulli           coin flips
@@ -31,8 +34,10 @@
 #include <concepts>
 #include <cstddef>
 #include <cstdint>
+#include <functional>
 #include <iterator>
 #include <limits>
+#include <mutex>
 #include <numbers>
 #include <random>
 #include <ranges>
@@ -200,14 +205,14 @@ template <engine G> [[nodiscard]] double exponential(G &g, double rate = 1.0) {
 template <engine G, std::ranges::random_access_range R>
 	requires std::ranges::borrowed_range<R>
 [[nodiscard]] constexpr decltype(auto) pick(G &g, R &&range) {
-	const auto count =
-		static_cast<std::size_t>(std::ranges::size(std::forward<R>(range)));
+	auto rng = std::forward<R>(range);
+	const auto count = static_cast<std::size_t>(std::ranges::size(rng));
 	assert(count != 0 && "pick() requires a non-empty range");
 
 	const auto offset = static_cast<std::ranges::range_difference_t<R>>(
 		detail::bounded<std::size_t>(g, count));
 
-	auto first = std::ranges::begin(range);
+	auto first = std::ranges::begin(rng);
 	return first[offset];
 }
 
@@ -215,14 +220,14 @@ template <engine G, std::ranges::random_access_range R>
 template <engine G, std::ranges::random_access_range R>
 	requires std::permutable<std::ranges::iterator_t<R>>
 constexpr void shuffle(G &g, R &&range) {
-	const auto count =
-		static_cast<std::size_t>(std::ranges::size(std::forward<R>(range)));
+	auto rng = std::forward<R>(range);
+	const auto count = static_cast<std::size_t>(std::ranges::size(rng));
 	if (count < 2) {
 		return;
 	}
 
 	using difference_type = std::ranges::range_difference_t<R>;
-	auto first = std::ranges::begin(range);
+	auto first = std::ranges::begin(rng);
 
 	for (std::size_t i = count; i-- > 1;) {
 		const auto j = static_cast<difference_type>(
@@ -273,8 +278,8 @@ template <class Engine = prng::xoshiro256pp>
 class stream {
 public:
 	using engine_type = Engine;
-	using result_type = Engine::result_type;
-	using state_type = Engine::state_type;
+	using result_type =  Engine::result_type;
+	using state_type =  Engine::state_type;
 
 	constexpr stream() = default;
 
@@ -380,6 +385,158 @@ private:
 };
 
 // ---------------------------------------------------------------------------
+// synchronized_stream — safe to share between threads
+// ---------------------------------------------------------------------------
+
+// A mutex-protected stream.  Every public operation locks the mutex, so one
+// instance can be shared by any number of threads.  Prefer with_lock() when
+// several draws must come from the same critical section.
+template <class Engine = prng::xoshiro256pp>
+	requires engine<Engine> && prng::concepts::seedable_engine<Engine> &&
+			 std::default_initializable<Engine>
+class synchronized_stream {
+public:
+	using engine_type = Engine;
+	using result_type =  Engine::result_type;
+	using state_type =  Engine::state_type;
+
+	static constexpr result_type min() noexcept { return Engine::min(); }
+
+	static constexpr result_type max() noexcept { return Engine::max(); }
+
+	synchronized_stream() = default;
+
+	explicit synchronized_stream(std::uint64_t seed_value) {
+		engine_.seed(seed_value);
+	}
+
+	explicit synchronized_stream(std::span<const std::uint32_t> words) {
+		std::seed_seq sequence(words.begin(), words.end());
+		engine_.seed(sequence);
+	}
+
+	template <prng::concepts::seed_sequence_like SeedSequence>
+	explicit synchronized_stream(SeedSequence &sequence) {
+		engine_.seed(sequence);
+	}
+
+	synchronized_stream(const synchronized_stream &) = delete;
+	synchronized_stream &operator=(const synchronized_stream &) = delete;
+	synchronized_stream(synchronized_stream &&) = delete;
+	synchronized_stream &operator=(synchronized_stream &&) = delete;
+
+	[[nodiscard]] result_type next() {
+		std::scoped_lock lock{mutex_};
+		return engine_();
+	}
+
+	[[nodiscard]] result_type operator()() { return next(); }
+
+	template <integer T> [[nodiscard]] T uniform(T lo, T hi) {
+		std::scoped_lock lock{mutex_};
+		return rng::uniform_int(engine_, lo, hi);
+	}
+
+	template <real F> [[nodiscard]] F uniform(F lo = F{0}, F hi = F{1}) {
+		std::scoped_lock lock{mutex_};
+		return rng::uniform_real<F>(engine_, lo, hi);
+	}
+
+	[[nodiscard]] bool coin(double p = 0.5) {
+		std::scoped_lock lock{mutex_};
+		return rng::bernoulli(engine_, p);
+	}
+
+	[[nodiscard]] double normal(double mean = 0.0, double stddev = 1.0) {
+		std::scoped_lock lock{mutex_};
+		return rng::normal(engine_, mean, stddev);
+	}
+
+	[[nodiscard]] double exponential(double rate = 1.0) {
+		std::scoped_lock lock{mutex_};
+		return rng::exponential(engine_, rate);
+	}
+
+	template <std::ranges::random_access_range R>
+		requires std::permutable<std::ranges::iterator_t<R>>
+	void shuffle(R &&range) {
+		std::scoped_lock lock{mutex_};
+		rng::shuffle(engine_, std::forward<R>(range));
+	}
+
+	// Returns by value: returning a reference after unlocking would race with
+	// other writers.
+	template <std::ranges::random_access_range R>
+		requires std::ranges::borrowed_range<R> &&
+				 std::copy_constructible<std::ranges::range_value_t<R>>
+	[[nodiscard]] std::ranges::range_value_t<R> pick(R &&range) {
+		std::scoped_lock lock{mutex_};
+		return rng::pick(engine_, std::forward<R>(range));
+	}
+
+	void fill_bytes(std::span<std::byte> out) {
+		std::scoped_lock lock{mutex_};
+		rng::fill_bytes(engine_, out);
+	}
+
+	void discard(unsigned long long n) {
+		std::scoped_lock lock{mutex_};
+		engine_.discard(n);
+	}
+
+	void jump()
+		requires prng::concepts::jumpable_engine<Engine>
+	{
+		std::scoped_lock lock{mutex_};
+		engine_.jump();
+	}
+
+	void long_jump()
+		requires prng::concepts::jumpable_engine<Engine>
+	{
+		std::scoped_lock lock{mutex_};
+		engine_.long_jump();
+	}
+
+	[[nodiscard]] state_type state() const
+		requires prng::concepts::checkpointable_engine<Engine>
+	{
+		std::scoped_lock lock{mutex_};
+		return engine_.state();
+	}
+
+	[[nodiscard]] bool is_valid() const
+		requires prng::concepts::checkpointable_engine<Engine>
+	{
+		std::scoped_lock lock{mutex_};
+		return engine_.is_valid();
+	}
+
+	bool set_state(const state_type &state)
+		requires prng::concepts::checkpointable_engine<Engine>
+	{
+		std::scoped_lock lock{mutex_};
+		return engine_.set_state(state);
+	}
+
+	// Advanced escape hatch for operations that must be atomic as a batch.
+	// The callback must return by value; return a reference would escape the
+	// lock and reintroduce a race.
+	template <class F> decltype(auto) with_lock(F &&function) {
+		using result = std::invoke_result_t<F, Engine &>;
+		static_assert(!std::is_reference_v<result>,
+					  "with_lock callback must return by value");
+
+		std::scoped_lock lock{mutex_};
+		return std::invoke(std::forward<F>(function), engine_);
+	}
+
+private:
+	mutable std::mutex mutex_;
+	Engine engine_{};
+};
+
+// ---------------------------------------------------------------------------
 // Factories
 // ---------------------------------------------------------------------------
 
@@ -417,6 +574,57 @@ split_streams(const stream<Engine> &base, std::size_t count) {
 	}
 
 	return streams;
+}
+
+// ---------------------------------------------------------------------------
+// Thread-local convenience API
+// ---------------------------------------------------------------------------
+
+// One entropy-seeded stream per thread.  Thread-local initialization is
+// thread-safe; the returned stream must not be shared with another thread.
+[[nodiscard]] inline stream<> &thread_rng() {
+	thread_local stream<> instance = make_stream();
+	return instance;
+}
+
+// Free functions for the common "just give me a random number" cases.
+// They use thread_rng() and are therefore safe to call from any thread.
+template <integer T> [[nodiscard]] inline T random_int(T lo, T hi) {
+	return thread_rng().uniform(lo, hi);
+}
+
+template <real F> [[nodiscard]] inline F random_real(F lo = F{0}, F hi = F{1}) {
+	return thread_rng().uniform(lo, hi);
+}
+
+[[nodiscard]] inline bool random_bool(double p = 0.5) {
+	return thread_rng().coin(p);
+}
+
+[[nodiscard]] inline double random_normal(double mean = 0.0,
+										  double stddev = 1.0) {
+	return thread_rng().normal(mean, stddev);
+}
+
+[[nodiscard]] inline double random_exponential(double rate = 1.0) {
+	return thread_rng().exponential(rate);
+}
+
+template <std::ranges::random_access_range R>
+	requires std::permutable<std::ranges::iterator_t<R>>
+inline void random_shuffle(R &&range) {
+	thread_rng().shuffle(std::forward<R>(range));
+}
+
+template <std::ranges::random_access_range R>
+	requires std::ranges::borrowed_range<R> &&
+			 std::copy_constructible<std::ranges::range_value_t<R>>
+[[nodiscard]] inline std::ranges::range_value_t<R> random_pick(R &&range) {
+	return thread_rng().pick(std::forward<R>(range));
+}
+
+inline void random_fill_bytes(std::span<std::byte> out) {
+	thread_rng().fill_bytes(out);
 }
 
 } // namespace rng
