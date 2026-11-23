@@ -1,0 +1,279 @@
+{
+    "version": 3,
+    "configurePresets": [
+        {
+            "name": "MSVC",
+            "description": "Visual Studio",
+            "hidden": true,
+            "generator": "Ninja",
+            "binaryDir": "${sourceDir}/build",
+            "installDir": "${sourceDir}/install",
+            "cacheVariables": {
+                "CMAKE_C_COMPILER": "cl.exe",
+                "CMAKE_CXX_COMPILER": "cl.exe"
+            },
+            "condition": {
+                "type": "equals",
+                "lhs": "${hostSystemName}",
+                "rhs": "Windows"
+            }
+        },
+        {
+            "name": "MSVC x64-debug",
+            "displayName": "MSVC x64-debug",
+            "description": "Visual Studio",
+            "inherits": "MSVC",
+            "architecture": {
+                "value": "x64",
+                "strategy": "external"
+            },
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug"
+            }
+        },
+        {
+            "name": "MSVC x64-release",
+            "displayName": "MSVC x64-release",
+            "description": "Visual Studio",
+            "inherits": "MSVC x64-debug",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release"
+            }
+        },
+        {
+            "name": "MSVC x86-debug",
+            "displayName": "MSVC x86 Debug",
+            "description": "Visual Studio",
+            "inherits": "MSVC",
+            "architecture": {
+                "value": "x86",
+                "strategy": "external"
+            },
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug"
+            }
+        },
+        {
+            "name": "MSVC x86-release",
+            "displayName": "MSVC x86 Release",
+            "description": "Visual Studio",
+            "inherits": "MSVC x86-debug",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release"
+            }
+        },
+        {
+            "name": "MSYS2 UCRT Clang Base",
+            "hidden": true,
+            "description": "MSYS2 UCRT Clang",
+            "generator": "Ninja",
+            "binaryDir": "${sourceDir}/build",
+            "installDir": "${sourceDir}/install",
+            "cacheVariables": {
+                "CMAKE_C_COMPILER": "clang.exe",
+                "CMAKE_CXX_COMPILER": "clang++.exe",
+                "CMAKE_TOOLCHAIN_FILE": "",
+                "CMAKE_INSTALL_PREFIX": "${sourceDir}/install"
+            }
+        },
+        {
+            "name": "MSYS2 UCRT Clang x64-debug",
+            "displayName": "UCRT Clang x64-debug",
+            "description": "MSYS2 UCRT Clang",
+            "inherits": "MSYS2 UCRT Clang Base",
+            "architecture": {
+                "value": "x64",
+                "strategy": "external"
+            },
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug"
+            }
+        },
+        {
+            "name": "MSYS2 UCRT Clang x64-release",
+            "displayName": "UCRT Clang x64-release",
+            "description": "MSYS2 UCRT Clang",
+            "inherits": "MSYS2 UCRT Clang Base",
+            "architecture": {
+                "value": "x64",
+                "strategy": "external"
+            },
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release"
+            }
+        },
+        {
+            "name": "MSYS2 UCRT Clang x86-debug",
+            "displayName": "UCRT Clang x86-debug",
+            "description": "MSYS2 UCRT Clang",
+            "inherits": "MSYS2 UCRT Clang Base",
+            "architecture": {
+                "value": "x86",
+                "strategy": "external"
+            },
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug"
+            }
+        },
+        {
+            "name": "MSYS2 UCRT Clang x86-release",
+            "displayName": "UCRT Clang x86-release",
+            "description": "MSYS2 UCRT Clang",
+            "inherits": "MSYS2 UCRT Clang Base",
+            "architecture": {
+                "value": "x86",
+                "strategy": "external"
+            },
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release"
+            }
+        },
+        {
+            "name": "MSYS2 UCRT GCC Base",
+            "hidden": true,
+            "description": "MSYS2 GCC Clang",
+            "generator": "Ninja",
+            "binaryDir": "${sourceDir}/build",
+            "installDir": "${sourceDir}/install",
+            "cacheVariables": {
+                "CMAKE_C_COMPILER": "g++.exe",
+                "CMAKE_CXX_COMPILER": "g++.exe",
+                "CMAKE_INSTALL_PREFIX": "${sourceDir}/install"
+            }
+        },
+        {
+            "name": "MSYS2 UCRT GCC x64-debug",
+            "displayName": "UCRT GCC x64-debug",
+            "description": "MSYS2 UCRT GCC",
+            "inherits": "MSYS2 UCRT GCC Base",
+            "architecture": {
+                "value": "x64",
+                "strategy": "external"
+            },
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug"
+            }
+        },
+        {
+            "name": "MSYS2 UCRT GCC x64-release",
+            "displayName": "UCRT GCC x64-release",
+            "description": "MSYS2 UCRT GCC",
+            "inherits": "MSYS2 UCRT GCC Base",
+            "architecture": {
+                "value": "x64",
+                "strategy": "external"
+            },
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release"
+            }
+        },
+        {
+            "name": "MSYS2 UCRT GCC x86-debug",
+            "displayName": "UCRT GCC x86-debug",
+            "description": "MSYS2 UCRT GCC",
+            "inherits": "MSYS2 UCRT GCC Base",
+            "architecture": {
+                "value": "x86",
+                "strategy": "external"
+            },
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug"
+            }
+        },
+        {
+            "name": "MSYS2 UCRT GCC x86-release",
+            "displayName": "UCRT GCC x86-release",
+            "description": "MSYS2 UCRT GCC",
+            "inherits": "MSYS2 UCRT GCC Base",
+            "architecture": {
+                "value": "x86",
+                "strategy": "external"
+            },
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release"
+            }
+        }
+    ],
+    "buildPresets": [
+        {
+            "name": "UCRT Clang x64-debug",
+            "description": "MSYS2 UCRT Clang",
+            "displayName": "UCRT Clang x64-debug",
+            "configurePreset": "MSYS2 UCRT Clang x64-debug"
+        },
+        {
+            "name": "UCRT Clang x64-release",
+            "description": "MSYS2 UCRT Clang",
+            "displayName": "UCRT Clang x64-release",
+            "configurePreset": "MSYS2 UCRT Clang x64-release"
+        },
+        {
+            "name": "UCRT Clang x86-debug",
+            "description": "MSYS2 UCRT Clang",
+            "displayName": "UCRT Clang x86-release",
+            "configurePreset": "MSYS2 UCRT Clang x86-debug"
+        },
+        {
+            "name": "UCRT Clang x86-release",
+            "description": "MSYS2 UCRT Clang",
+            "displayName": "UCRT Clang x86-release",
+            "configurePreset": "MSYS2 UCRT Clang x86-release"
+        },
+        {
+            "name": "MSVC x64-debug",
+            "description": "Visual Studio",
+            "displayName": "MSVC x64-debug",
+            "configurePreset": "MSVC x64-debug"
+        },
+        {
+            "name": "MSVC x64-release",
+            "description": "Visual Studio",
+            "displayName": "MSVC x64-release",
+            "configurePreset": "MSVC x64-release"
+        },
+        {
+            "name": "MSVC x86-debug",
+            "description": "Visual Studio",
+            "displayName": "MSVC x86-debug",
+            "configurePreset": "MSVC x86-debug"
+        },
+        {
+            "name": "MSVC x86-release",
+            "description": "Visual Studio",
+            "displayName": "MSVC x86-release",
+            "configurePreset": "MSVC x86-release"
+        },
+        {
+            "name": "UCRT GCC x64-debug",
+            "description": "UCRT GCC",
+            "displayName": "UCRT GCC x64-debug",
+            "configurePreset": "MSYS2 UCRT GCC x64-debug"
+        },
+        {
+            "name": "UCRT GCC x64-release",
+            "description": "UCRT GCC",
+            "displayName": "UCRT GCC x64-release",
+            "configurePreset": "MSYS2 UCRT GCC x64-release"
+        },
+        {
+            "name": "UCRT GCC x86-debug",
+            "description": "UCRT GCC",
+            "displayName": "UCRT GCC x86-debug",
+            "configurePreset": "MSYS2 UCRT GCC x86-debug"
+        },
+        {
+            "name": "UCRT GCC x86-release",
+            "description": "UCRT GCC",
+            "displayName": "UCRT GCC x86-release",
+            "configurePreset": "MSYS2 UCRT GCC x86-release"
+        }
+    ],
+    "testPresets": [
+        {
+            "name": "UCRT Clang x64-debug ctest",
+            "description": "",
+            "displayName": "",
+            "configurePreset": "MSYS2 UCRT Clang x64-debug"
+        }
+    ]
+}

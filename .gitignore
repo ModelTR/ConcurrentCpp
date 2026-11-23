@@ -1,1 +1,17 @@
 build
+logs
+build-check
+build-pgo
+
+.reasonix
+.vs
+
+# Bazel
+bazel-*
+.bazelrc.local
+
+# Meson subprojects fetched from wraps
+subprojects/packagecache/
+subprojects/.wraplock
+subprojects/abseil-cpp*/
+subprojects/benchmark*/
