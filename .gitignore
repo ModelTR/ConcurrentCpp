@@ -15,3 +15,4 @@ subprojects/packagecache/
 subprojects/.wraplock
 subprojects/abseil-cpp*/
 subprojects/benchmark*/
+subprojects/googletest*/

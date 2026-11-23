@@ -154,3 +154,29 @@ if(NOT MSVC)
     )
 endif()
 # ---------------------------------------------------------------------------
+
+# --- Tests ----------------------------------------------------------------
+enable_testing()
+
+file(GLOB TEST_FILES tests/*_test.cpp)
+
+add_executable(ConcurrentTests ${TEST_FILES})
+target_include_directories(ConcurrentTests PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+)
+target_link_libraries(ConcurrentTests PRIVATE
+    GTest::gtest_main
+    absl::synchronization
+    Threads::Threads
+)
+
+if(NOT MSVC)
+    target_link_libraries(ConcurrentTests PRIVATE atomic)
+    target_compile_options(ConcurrentTests PRIVATE -Wall -Wextra)
+else()
+    target_compile_options(ConcurrentTests PRIVATE /W4 /Zc:preprocessor)
+endif()
+
+include(GoogleTest)
+gtest_discover_tests(ConcurrentTests)
+# ---------------------------------------------------------------------------

@@ -13,10 +13,11 @@ project(
 # Mirrors the non-PGO part of CMakeLists.txt:
 #   * CoucurrentCpp   <- main.cpp (+ src/*.cpp)
 #   * ConcurrentBench <- benchmark/benchmark.cpp
+#   * ConcurrentTests <- tests/*_test.cpp
 #
 # The PGO/LTO logic in cmake/pgo.cmake is intentionally not ported.
-# abseil-cpp and google/benchmark are pinned to the same revisions as the
-# CMake and Bazel builds through subprojects/*.wrap.
+# abseil-cpp, google/benchmark and googletest are pinned to the same
+# revisions as the CMake and Bazel builds through subprojects/*.wrap.
 
 cpp = meson.get_compiler('cpp')
 
@@ -65,16 +66,31 @@ benchmark_opts.add_cmake_defines({
 benchmark_proj = cmake.subproject('benchmark-1.9.5', options: benchmark_opts)
 benchmark_dep = benchmark_proj.dependency('benchmark')
 
+# --- googletest --------------------------------------------------------------
+# Same tag as the CMake and Bazel builds.  Only gtest is needed for the smoke
+# tests, so gmock is not built.
+gtest_opts = cmake.subproject_options()
+gtest_opts.add_cmake_defines({
+  'INSTALL_GTEST': 'OFF',
+  'gtest_build_tests': 'OFF',
+  'gmock_build_tests': 'OFF',
+  'BUILD_GMOCK': 'OFF',
+})
+gtest_proj = cmake.subproject('googletest-1.18.0', options: gtest_opts)
+gtest_main_dep = gtest_proj.dependency('gtest_main')
+
 threads_dep = dependency('threads')
 
 deps_main = [absl_sync_dep]
 deps_bench = [absl_sync_dep, benchmark_dep, threads_dep]
+deps_test = [gtest_main_dep, absl_sync_dep, threads_dep]
 
 if cpp.get_argument_syntax() != 'msvc'
   atomic_dep = cpp.find_library('atomic', required: false)
   if atomic_dep.found()
     deps_main += atomic_dep
     deps_bench += atomic_dep
+    deps_test += atomic_dep
   endif
 endif
 
@@ -99,3 +115,22 @@ executable(
   link_args: exe_link_args,
   install: false,
 )
+
+# Tests (google/googletest). Meson has no globbing, so list the sources.
+test_sources = [
+  'tests/smoke_inplace_vector_test.cpp',
+  'tests/smoke_primitives_test.cpp',
+  'tests/smoke_random_test.cpp',
+  'tests/smoke_stacks_test.cpp',
+]
+
+test_exe = executable(
+  'ConcurrentTests',
+  test_sources,
+  include_directories: project_inc,
+  dependencies: deps_test,
+  link_args: exe_link_args,
+  install: false,
+)
+
+test('smoke', test_exe, timeout: 60)

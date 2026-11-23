@@ -15,7 +15,7 @@ This a pure C++ 20 implementation for serval concurrent containers: forward list
 
 ## Other
 
-- [ ] Unit tests(google/googletest)
+- [x] Smoke tests(google/googletest)
 - [ ] Benchmark(google/benchmark)
 - [ ] CI/CD
 - [ ] More descriptions

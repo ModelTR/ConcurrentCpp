@@ -3,11 +3,13 @@
 # Mirrors the non-PGO part of CMakeLists.txt:
 #   * CoucurrentCpp   <- main.cpp (+ src/*.cpp)
 #   * ConcurrentBench <- benchmark/benchmark.cpp
+#   * ConcurrentTests <- tests/*_test.cpp
 #
 # The PGO/LTO logic in cmake/pgo.cmake is intentionally not ported.
 
 load("@rules_cc//cc:cc_binary.bzl", "cc_binary")
 load("@rules_cc//cc:cc_library.bzl", "cc_library")
+load("@rules_cc//cc:cc_test.bzl", "cc_test")
 
 package(default_visibility = ["//visibility:public"])
 
@@ -79,5 +81,18 @@ cc_binary(
         ":concurrentcpp",
         "@abseil-cpp//absl/synchronization",
         "@google_benchmark//:benchmark",
+    ],
+)
+
+# Smoke tests for the header-only containers and utilities in include/.
+cc_test(
+    name = "ConcurrentTests",
+    srcs = glob(["tests/*_test.cpp"]),
+    copts = _COPTS,
+    linkopts = _LINKOPTS,
+    deps = [
+        ":concurrentcpp",
+        "@abseil-cpp//absl/synchronization",
+        "@googletest//:gtest_main",
     ],
 )
