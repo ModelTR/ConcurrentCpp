@@ -1,11 +1,16 @@
-# File: include/concurrent_quene.hpp
+# File: CMakeLists.txt
 # Author: modelTR (mxtian_ran@163.com)
 # Brief Serval implemention of concurrent quene (descriptions need to be enriched)
-# Version 0.1
+# Version 0.2
 # Date 2026-11-02
 # Copyright MIT License (c) 2026
 
-cmake_minimum_required(VERSION 4.4.0)
+cmake_minimum_required(VERSION 4.0.0)
+
+cmake_policy(SET CMP0141 NEW)
+
+set(CMAKE_MSVC_DEBUG_INFORMATION_FORMAT
+    "$<$<CONFIG:Debug,RelWithDebInfo>:Embedded>")
 
 project(CoucurrentCpp LANGUAGES CXX)
 
@@ -21,7 +26,6 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-
 if(NOT MSVC)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -static")
     # Using lld linker globly
@@ -30,12 +34,25 @@ endif()
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+# --- PGO / LTO -------------------------------------------------------------
+# PGO=ON selects PGO_MODE=AUTO: configure-time bootstrap (instrumented build +
+# training + profile merge), then this build uses the merged profile.
+# PGO_LTO=THIN and PGO_SCOPE=TARGET keep the optimization on ConcurrentBench
+# only; the benchmark library and absl stay out of the profile.
+if(NOT MSVC)
+    option(PGO "Enable PGO+LTO for the benchmark build" OFF)
+    set(PGO_LTO FULL)
+    set(PGO_SCOPE GLOBAL)
+    include(cmake/pgo.cmake)
+endif()
+# ---------------------------------------------------------------------------
+
 include(FetchContent)
 include(cmake/CPM.cmake)
 
 file(GLOB SRC_FILES src/*.cpp)
 
-# --- goolgle::benchmark ----------------------------------------------------
+# --- google::benchmark ----------------------------------------------------
 CPMAddPackage(
     NAME benchmark
     GIT_REPOSITORY https://gh-proxy.com/https://github.com/google/benchmark.git
@@ -49,6 +66,20 @@ CPMAddPackage(
 )
 # ---------------------------------------------------------------------------
 
+# --- absl ------------------------------------------------------------------
+CPMAddPackage(
+  NAME absl
+  GIT_REPOSITORY https://v4.gh-proxy.org/https://github.com/abseil/abseil-cpp.git
+  GIT_TAG 20260817.0
+  GIT_SHALLOW
+  OPTIONS "ABSL_BUILD_TESTING OFF" "ABSL_ENABLE_INSTALL OFF"
+)
+# Windows hasn't O_NONBLOCK
+if(TARGET absl_time_zone)
+  target_compile_definitions(absl_time_zone PRIVATE O_NONBLOCK=0)
+endif()
+# ---------------------------------------------------------------------------
+
 add_executable(CoucurrentCpp
   main.cpp
   ${SRC_FILES}
@@ -60,7 +91,7 @@ target_include_directories(CoucurrentCpp PRIVATE
 )
 
 target_link_libraries(CoucurrentCpp PRIVATE
-    benchmark::benchmark_main
+    absl::synchronization
 )
 
 if(NOT MSVC)
@@ -85,6 +116,7 @@ target_include_directories(ConcurrentBench PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/benchmark
 )
 target_link_libraries(ConcurrentBench PRIVATE
+    absl::synchronization
     benchmark::benchmark
     Threads::Threads
 )
@@ -95,3 +127,20 @@ if(NOT MSVC)
 else()
     target_compile_options(ConcurrentBench PRIVATE /W4 /Zc:preprocessor)
 endif()
+
+# --- PGO training workload -------------------------------------------------6
+# One repetition is enough to produce profile data; the regular benchmark
+# defaults (9 repetitions, full console report) are intentionally overridden.
+if(NOT MSVC)
+    pgo_apply(ConcurrentBench)
+    pgo_add_training_target(
+    NAME concurrent-bench
+    EXECUTABLE ConcurrentBench
+    COMMAND
+        --benchmark_filter=.*
+        --benchmark_repetitions=3
+        --benchmark_min_time=0.01s
+    REPEAT 1
+    )
+endif()
+# ---------------------------------------------------------------------------

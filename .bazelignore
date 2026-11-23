@@ -1,0 +1,8 @@
+# CMake build trees (build/_deps) and Meson subprojects contain third-party
+# BUILD.bazel files that are not part of this workspace; keep Bazel package
+# discovery out of them.
+build
+build-check
+build-pgo
+logs
+subprojects

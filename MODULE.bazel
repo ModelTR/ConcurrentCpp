@@ -1,0 +1,18 @@
+# Bazel module definition for ConcurrentCpp.
+#
+# Dependencies mirror the CPMAddPackage() entries in CMakeLists.txt.
+
+module(
+    name = "concurrentcpp",
+    version = "0.1.0",
+)
+
+bazel_dep(name = "rules_cc", version = "0.2.28")
+
+# Used by select() in BUILD.bazel to pick per-OS compiler flags.
+bazel_dep(name = "platforms", version = "1.1.0")
+
+# Same revisions as the CMake build:
+#   google/benchmark v1.9.5, abseil-cpp 20260817.0
+bazel_dep(name = "google_benchmark", version = "1.9.5")
+bazel_dep(name = "abseil-cpp", version = "20260817.0")

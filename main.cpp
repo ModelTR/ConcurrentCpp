@@ -8,8 +8,6 @@
  *
  */
 
-/// @todo Sorting the order of output stream message for debugging
-
 #include <chrono>
 #include <cstddef>
 #include <cstdlib>
@@ -19,9 +17,9 @@
 #include <iostream>
 #include <thread>
 
-#include "concurrent_stack.hpp"
-#include "include/random.hpp"
-#include "inplace_vector.hpp"
+#include "common/inplace_vector.hpp"
+#include "common/random.hpp"
+#include "stacks/elimi_backoff_stack.hpp"
 
 constexpr size_t CAPACITY = 10;
 constexpr size_t THREAD_NUMS = 3;
@@ -41,12 +39,11 @@ single_thread(const concur::inplace_vector<std::function<void(int)>, 2> &fns)
 auto main() -> int {
 
 	try {
-		auto rd = rng::make_stream();
 
 		concur::inplace_vector<std::function<void(int)>, 2> fns;
 		concur::inplace_vector<std::jthread, THREAD_NUMS> threads;
 
-		concur::ElimiBackoffStack<int, CAPACITY> stack{1, 2, 3, 4, 5};
+		concur::ElimiBackoffStack<int, CAPACITY, 64> stack{1, 2, 3, 4, 5};
 
 		fns.push_back([&stack](int x) {
 			if (stack.push(x)) {

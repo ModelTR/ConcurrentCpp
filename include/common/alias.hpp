@@ -2,17 +2,22 @@
  * @file include/alias.hpp
  * @author modleTR (mxtian_ran@163.com)
  * @brief Alias for signed/unsigned intergal, atomic signed/unsigned intergal
- * @version 0.1
- * @date 2026-11-02
+ * @version 0.2
+ * @date 2026-11-23
  * @copyright MIT License (c) 2026
  * 
  */
+
+#pragma once
 
 /// @note For std::int8_t, std::int16_t, ..., std::uint8_t, std::uint16_t
 #include <cstdint>
 
 /// @note For template std::atomic<T>
 #include <atomic>
+#include <string>
+#include <string_view>
+#include <vector>
 
 
 /// Signed intergal
@@ -27,9 +32,14 @@ using u16 = std::uint16_t;
 using u32 = std::uint32_t;
 using u64 = std::uint64_t;
 
-/// Other
+/// Others
 
 using uintptr = std::uintptr_t;
+
+/// Containers
+
+template<class T>
+using vec = std::vector<T>;
 
 /// Atomic signed and unsigned intergal
 namespace atomic {
@@ -50,3 +60,6 @@ namespace atomic {
 }
 
 using memorder = std::memory_order;
+
+using str = std::string;
+using str_vw = std::string_view;

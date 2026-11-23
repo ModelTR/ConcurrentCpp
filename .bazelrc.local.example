@@ -1,0 +1,7 @@
+# Copy this file to .bazelrc.local and adjust the paths for your machine.
+#
+# Visual Studio: the directory that contains VC/Tools/MSVC.
+build --repo_env=BAZEL_VC="C:/Program Files/Microsoft Visual Studio/18/Community/VC"
+
+# LLVM installation (contains bin/clang-cl.exe, lld-link.exe, llvm-lib.exe).
+build --repo_env=BAZEL_LLVM="C:/Program Files/LLVM"

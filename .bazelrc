@@ -1,0 +1,10 @@
+# Pick the toolchain with --config=clang-cl on Windows:
+#   bazel build --config=clang-cl //...
+# Without --config=clang-cl Bazel uses the default MSVC toolchain.
+#
+# Machine-specific paths (BAZEL_VC, BAZEL_LLVM) live in .bazelrc.local, which
+# is not committed. See .bazelrc.local.example.
+build:clang-cl --repo_env=USE_CLANG_CL=1
+build:clang-cl --compiler=clang-cl
+
+try-import %workspace%/.bazelrc.local

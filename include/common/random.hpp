@@ -25,7 +25,8 @@
 #ifndef PRNG_RANDOM_HPP
 #define PRNG_RANDOM_HPP
 
-#include <xoshiro256pp.hpp>
+#include "alias.hpp"
+#include "xoshiro256pp.hpp"
 
 #include <algorithm>
 #include <array>
@@ -49,7 +50,9 @@
 
 namespace rng {
 
-inline constexpr std::string_view version = "1.0.0";
+namespace rngs = std::ranges;
+
+inline constexpr str_vw VERSION = "1.0.0";
 
 // ---------------------------------------------------------------------------
 // Concepts
@@ -79,16 +82,16 @@ concept real = std::floating_point<T> && (std::numeric_limits<T>::digits <= 53);
 namespace detail {
 
 template <std::unsigned_integral U, engine G>
-[[nodiscard]] constexpr U next_unsigned(G &g) noexcept {
+[[nodiscard]] constexpr auto next_unsigned(G &g) noexcept -> U {
 	using result_type = std::make_unsigned_t<typename G::result_type>;
 
 	if constexpr (sizeof(result_type) >= sizeof(U)) {
 		return static_cast<U>(g());
 	} else {
-		constexpr std::size_t parts =
+		constexpr size_t PARTS =
 			(sizeof(U) + sizeof(result_type) - 1) / sizeof(result_type);
 		U value{};
-		for (std::size_t i = 0; i < parts; ++i) {
+		for (size_t i = 0; i < PARTS; ++i) {
 			value = static_cast<U>((value << (sizeof(result_type) * 8U)) |
 								   static_cast<U>(g()));
 		}
@@ -126,7 +129,7 @@ template <std::unsigned_integral U, engine G>
 
 // Inclusive integer range [lo, hi].  Reversing the arguments swaps them.
 template <integer T, engine G>
-[[nodiscard]] constexpr T uniform_int(G &g, T lo, T hi) noexcept {
+[[nodiscard]] constexpr auto uniform_int(G &g, T lo, T hi) noexcept -> T {
 	if (hi < lo) {
 		std::swap(lo, hi);
 	}
@@ -147,8 +150,8 @@ template <integer T, engine G>
 
 // Half-open floating-point range [lo, hi).  Reversing the arguments swaps them.
 template <real F, engine G>
-[[nodiscard]] constexpr F uniform_real(G &g, F lo = F{0},
-									   F hi = F{1}) noexcept {
+[[nodiscard]] constexpr auto uniform_real(G &g, F lo = F{0},
+										  F hi = F{1}) noexcept -> F {
 	if (hi < lo) {
 		std::swap(lo, hi);
 	}
@@ -156,21 +159,20 @@ template <real F, engine G>
 		return lo;
 	}
 
-	constexpr int digits = std::numeric_limits<F>::digits;
-	const std::uint64_t value = detail::next_unsigned<std::uint64_t>(g);
-	const std::uint64_t mantissa =
-		value >> (64U - static_cast<unsigned>(digits));
+	constexpr int DIGITS = std::numeric_limits<F>::digits;
+	const auto value = detail::next_unsigned<std::uint64_t>(g);
+	const u64 mantissa = value >> (64U - static_cast<unsigned>(DIGITS));
 
-	const F unit = static_cast<F>(mantissa) *
-				   (F{1} / static_cast<F>(std::uint64_t{1}
-										  << static_cast<unsigned>(digits)));
+	const F unit =
+		static_cast<F>(mantissa) *
+		(F{1} / static_cast<F>(u64{1} << static_cast<unsigned>(DIGITS)));
 
 	return lo + ((hi - lo) * unit);
 }
 
 // Bernoulli trial with probability p.  p is clamped to [0, 1].
 template <engine G>
-[[nodiscard]] constexpr bool bernoulli(G &g, double p = 0.5) noexcept {
+[[nodiscard]] constexpr auto bernoulli(G &g, double p = 0.5) noexcept -> bool {
 	if (p <= 0.0) {
 		return false;
 	}
@@ -182,16 +184,18 @@ template <engine G>
 
 // Standard normal distribution, one sample per call (Box-Muller).
 template <engine G>
-[[nodiscard]] double normal(G &g, double mean = 0.0, double stddev = 1.0) {
-	const double u1 = uniform_real<double>(g, 0.0, 1.0);
-	const double u2 = uniform_real<double>(g, 0.0, 1.0);
+[[nodiscard]] auto normal(G &g, double mean = 0.0, double stddev = 1.0)
+	-> double {
+	const auto u1 = uniform_real<double>(g, 0.0, 1.0);
+	const auto u2 = uniform_real<double>(g, 0.0, 1.0);
 	const double radius = std::sqrt(-2.0 * std::log1p(-u1));
 	const double angle = 2.0 * std::numbers::pi_v<double> * u2;
 	return mean + (stddev * radius * std::cos(angle));
 }
 
 // Exponential distribution with the given rate (rate > 0).
-template <engine G> [[nodiscard]] double exponential(G &g, double rate = 1.0) {
+template <engine G>
+[[nodiscard]] auto exponential(G &g, double rate = 1.0) -> double {
 	assert(rate > 0.0);
 	return -std::log1p(-uniform_real<double>(g, 0.0, 1.0)) / rate;
 }
@@ -202,51 +206,49 @@ template <engine G> [[nodiscard]] double exponential(G &g, double rate = 1.0) {
 
 // Uniform element selection.  The range must be non-empty and borrowed (so the
 // returned reference cannot dangle).
-template <engine G, std::ranges::random_access_range R>
-	requires std::ranges::borrowed_range<R>
-[[nodiscard]] constexpr decltype(auto) pick(G &g, R &&range) {
-	auto rng = std::forward<R>(range);
-	const auto count = static_cast<std::size_t>(std::ranges::size(rng));
+template <engine G, rngs::random_access_range R>
+	requires rngs::borrowed_range<R>
+[[nodiscard]] constexpr auto pick(G &g, R &&range) -> decltype(auto) {
+	const auto count = static_cast<size_t>(rngs::size(std::forward<R>(range)));
 	assert(count != 0 && "pick() requires a non-empty range");
 
-	const auto offset = static_cast<std::ranges::range_difference_t<R>>(
-		detail::bounded<std::size_t>(g, count));
+	const auto offset = static_cast<rngs::range_difference_t<R>>(
+		detail::bounded<size_t>(g, count));
 
-	auto first = std::ranges::begin(rng);
+	auto first = rngs::begin(std::forward<R>(range));
 	return first[offset];
 }
 
 // In-place Fisher-Yates shuffle.
-template <engine G, std::ranges::random_access_range R>
-	requires std::permutable<std::ranges::iterator_t<R>>
-constexpr void shuffle(G &g, R &&range) {
-	auto rng = std::forward<R>(range);
-	const auto count = static_cast<std::size_t>(std::ranges::size(rng));
+template <engine G, rngs::random_access_range R>
+	requires std::permutable<rngs::iterator_t<R>>
+constexpr auto shuffle(G &g, R &&range) -> void {
+	const auto count = static_cast<size_t>(rngs::size(std::forward<R>(range)));
 	if (count < 2) {
 		return;
 	}
 
-	using difference_type = std::ranges::range_difference_t<R>;
-	auto first = std::ranges::begin(rng);
+	using difference_type = rngs::range_difference_t<R>;
+	auto first = rngs::begin(range);
 
-	for (std::size_t i = count; i-- > 1;) {
-		const auto j = static_cast<difference_type>(
-			detail::bounded<std::size_t>(g, i + 1));
+	for (size_t i = count; i-- > 1;) {
+		const auto j =
+			static_cast<difference_type>(detail::bounded<size_t>(g, i + 1));
 		const auto k = static_cast<difference_type>(i);
 		if (j != k) {
-			std::ranges::iter_swap(first + k, first + j);
+			rngs::iter_swap(first + k, first + j);
 		}
 	}
 }
 
 // Fills a byte span from consecutive engine outputs.
-template <engine G> void fill_bytes(G &g, std::span<std::byte> out) {
+template <engine G> auto fill_bytes(G &g, std::span<std::byte> out) -> void {
 	using word_type = std::make_unsigned_t<typename G::result_type>;
-	constexpr std::size_t width = sizeof(word_type);
+	constexpr size_t WIDTH = sizeof(word_type);
 
-	for (std::size_t i = 0; i < out.size(); i += width) {
-		const word_type value = static_cast<word_type>(g());
-		for (std::size_t j = 0; j < width && i + j < out.size(); ++j) {
+	for (size_t i = 0; i < out.size(); i += WIDTH) {
+		const auto value = static_cast<word_type>(g());
+		for (size_t j = 0; j < WIDTH && i + j < out.size(); ++j) {
 			out[i + j] = static_cast<std::byte>(static_cast<unsigned char>(
 				static_cast<word_type>(value >> (j * 8U)) & word_type{0xFF}));
 		}
@@ -259,9 +261,9 @@ template <engine G> void fill_bytes(G &g, std::span<std::byte> out) {
 
 // Eight 32-bit words from std::random_device.  Not a replacement for a
 // cryptographic RNG; it is only seed material.
-[[nodiscard]] inline std::array<std::uint32_t, 8> entropy_seed() {
+[[nodiscard]] inline auto entropy_seed() -> std::array<u32, 8> {
 	std::random_device device;
-	std::array<std::uint32_t, 8> words{};
+	std::array<u32, 8> words{};
 	for (auto &word : words) {
 		word = device();
 	}
@@ -278,16 +280,14 @@ template <class Engine = prng::xoshiro256pp>
 class stream {
 public:
 	using engine_type = Engine;
-	using result_type =  Engine::result_type;
-	using state_type =  Engine::state_type;
+	using result_type = Engine::result_type;
+	using state_type = Engine::state_type;
 
 	constexpr stream() = default;
 
-	constexpr explicit stream(std::uint64_t seed_value) {
-		engine_.seed(seed_value);
-	}
+	constexpr explicit stream(u64 seed_value) { engine_.seed(seed_value); }
 
-	explicit stream(std::span<const std::uint32_t> words) {
+	explicit stream(std::span<const u32> words) {
 		std::seed_seq sequence(words.begin(), words.end());
 		engine_.seed(sequence);
 	}
@@ -297,88 +297,96 @@ public:
 		engine_.seed(sequence);
 	}
 
-	[[nodiscard]] constexpr result_type next() noexcept { return engine_(); }
+	[[nodiscard]] constexpr auto next() noexcept -> result_type {
+		return engine_();
+	}
 
-	[[nodiscard]] constexpr result_type operator()() noexcept {
+	[[nodiscard]] constexpr auto operator()() noexcept -> result_type {
 		return engine_();
 	}
 
 	template <integer T>
-	[[nodiscard]] constexpr T uniform(T lo, T hi) noexcept {
+	[[nodiscard]] constexpr auto uniform(T lo, T hi) noexcept -> T {
 		return rng::uniform_int(engine_, lo, hi);
 	}
 
 	template <real F>
-	[[nodiscard]] constexpr F uniform(F lo = F{0}, F hi = F{1}) noexcept {
+	[[nodiscard]] constexpr auto uniform(F lo = F{0}, F hi = F{1}) noexcept
+		-> F {
 		return rng::uniform_real<F>(engine_, lo, hi);
 	}
 
-	[[nodiscard]] constexpr bool coin(double p = 0.5) noexcept {
+	[[nodiscard]] constexpr auto coin(double p = 0.5) noexcept -> bool {
 		return rng::bernoulli(engine_, p);
 	}
 
-	[[nodiscard]] double normal(double mean = 0.0, double stddev = 1.0) {
+	[[nodiscard]] auto normal(double mean = 0.0, double stddev = 1.0)
+		-> double {
 		return rng::normal(engine_, mean, stddev);
 	}
 
-	[[nodiscard]] double exponential(double rate = 1.0) {
+	[[nodiscard]] auto exponential(double rate = 1.0) -> double {
 		return rng::exponential(engine_, rate);
 	}
 
-	template <std::ranges::random_access_range R>
-	constexpr void shuffle(R &&range) {
+	template <rngs::random_access_range R>
+	constexpr auto shuffle(R &&range) -> void {
 		rng::shuffle(engine_, std::forward<R>(range));
 	}
 
-	template <std::ranges::random_access_range R>
-		requires std::ranges::borrowed_range<R>
-	[[nodiscard]] constexpr decltype(auto) pick(R &&range) {
+	template <rngs::random_access_range R>
+		requires rngs::borrowed_range<R>
+	[[nodiscard]] constexpr auto pick(R &&range) -> decltype(auto) {
 		return rng::pick(engine_, std::forward<R>(range));
 	}
 
-	void fill_bytes(std::span<std::byte> out) { rng::fill_bytes(engine_, out); }
+	auto fill_bytes(std::span<std::byte> out) -> void {
+		rng::fill_bytes(engine_, out);
+	}
 
-	constexpr void discard(unsigned long long n) noexcept {
+	constexpr auto discard(unsigned long long n) noexcept -> void {
 		engine_.discard(n);
 	}
 
-	constexpr void jump() noexcept
+	constexpr auto jump() noexcept -> void
 		requires prng::concepts::jumpable_engine<Engine>
 	{
 		engine_.jump();
 	}
 
-	constexpr void long_jump() noexcept
+	constexpr auto long_jump() noexcept -> void
 		requires prng::concepts::jumpable_engine<Engine>
 	{
 		engine_.long_jump();
 	}
 
-	[[nodiscard]] constexpr decltype(auto) state() const noexcept
+	[[nodiscard]] constexpr auto state() const noexcept -> decltype(auto)
 		requires requires(const Engine &e) { e.state(); }
 	{
 		return engine_.state();
 	}
 
-	[[nodiscard]] constexpr bool is_valid() const noexcept
+	[[nodiscard]] constexpr auto is_valid() const noexcept -> bool
 		requires prng::concepts::checkpointable_engine<Engine>
 	{
 		return engine_.is_valid();
 	}
 
-	constexpr bool set_state(const state_type &state) noexcept
+	constexpr auto set_state(const state_type &state) noexcept -> bool
 		requires prng::concepts::checkpointable_engine<Engine>
 	{
 		return engine_.set_state(state);
 	}
 
-	[[nodiscard]] constexpr Engine &engine() noexcept { return engine_; }
-
-	[[nodiscard]] constexpr const Engine &engine() const noexcept {
+	[[nodiscard]] constexpr auto engine() noexcept -> Engine & {
 		return engine_;
 	}
 
-	constexpr bool operator==(const stream &) const noexcept = default;
+	[[nodiscard]] constexpr auto engine() const noexcept -> const Engine & {
+		return engine_;
+	}
+
+	constexpr auto operator==(const stream &) const noexcept -> bool = default;
 
 private:
 	Engine engine_{};
@@ -397,20 +405,22 @@ template <class Engine = prng::xoshiro256pp>
 class synchronized_stream {
 public:
 	using engine_type = Engine;
-	using result_type =  Engine::result_type;
-	using state_type =  Engine::state_type;
+	using result_type = Engine::result_type;
+	using state_type = Engine::state_type;
 
-	static constexpr result_type min() noexcept { return Engine::min(); }
+	static constexpr auto min() noexcept -> result_type {
+		return Engine::min();
+	}
 
-	static constexpr result_type max() noexcept { return Engine::max(); }
+	static constexpr auto max() noexcept -> result_type {
+		return Engine::max();
+	}
 
 	synchronized_stream() = default;
 
-	explicit synchronized_stream(std::uint64_t seed_value) {
-		engine_.seed(seed_value);
-	}
+	explicit synchronized_stream(u64 seed_value) { engine_.seed(seed_value); }
 
-	explicit synchronized_stream(std::span<const std::uint32_t> words) {
+	explicit synchronized_stream(std::span<const u32> words) {
 		std::seed_seq sequence(words.begin(), words.end());
 		engine_.seed(sequence);
 	}
@@ -421,98 +431,101 @@ public:
 	}
 
 	synchronized_stream(const synchronized_stream &) = delete;
-	synchronized_stream &operator=(const synchronized_stream &) = delete;
+	auto operator=(const synchronized_stream &)
+		-> synchronized_stream & = delete;
 	synchronized_stream(synchronized_stream &&) = delete;
-	synchronized_stream &operator=(synchronized_stream &&) = delete;
+	auto operator=(synchronized_stream &&) -> synchronized_stream & = delete;
 
-	[[nodiscard]] result_type next() {
+	[[nodiscard]] auto next() -> result_type {
 		std::scoped_lock lock{mutex_};
 		return engine_();
 	}
 
-	[[nodiscard]] result_type operator()() { return next(); }
+	[[nodiscard]] auto operator()() -> result_type { return next(); }
 
-	template <integer T> [[nodiscard]] T uniform(T lo, T hi) {
+	template <integer T> [[nodiscard]] auto uniform(T lo, T hi) -> T {
 		std::scoped_lock lock{mutex_};
 		return rng::uniform_int(engine_, lo, hi);
 	}
 
-	template <real F> [[nodiscard]] F uniform(F lo = F{0}, F hi = F{1}) {
+	template <real F>
+	[[nodiscard]] auto uniform(F lo = F{0}, F hi = F{1}) -> F {
 		std::scoped_lock lock{mutex_};
 		return rng::uniform_real<F>(engine_, lo, hi);
 	}
 
-	[[nodiscard]] bool coin(double p = 0.5) {
+	[[nodiscard]] auto coin(double p = 0.5) -> bool {
 		std::scoped_lock lock{mutex_};
 		return rng::bernoulli(engine_, p);
 	}
 
-	[[nodiscard]] double normal(double mean = 0.0, double stddev = 1.0) {
+	[[nodiscard]] auto normal(double mean = 0.0, double stddev = 1.0)
+		-> double {
 		std::scoped_lock lock{mutex_};
 		return rng::normal(engine_, mean, stddev);
 	}
 
-	[[nodiscard]] double exponential(double rate = 1.0) {
+	[[nodiscard]] auto exponential(double rate = 1.0) -> double {
 		std::scoped_lock lock{mutex_};
 		return rng::exponential(engine_, rate);
 	}
 
-	template <std::ranges::random_access_range R>
-		requires std::permutable<std::ranges::iterator_t<R>>
-	void shuffle(R &&range) {
+	template <rngs::random_access_range R>
+		requires std::permutable<rngs::iterator_t<R>>
+	auto shuffle(R &&range) -> void {
 		std::scoped_lock lock{mutex_};
 		rng::shuffle(engine_, std::forward<R>(range));
 	}
 
 	// Returns by value: returning a reference after unlocking would race with
 	// other writers.
-	template <std::ranges::random_access_range R>
-		requires std::ranges::borrowed_range<R> &&
-				 std::copy_constructible<std::ranges::range_value_t<R>>
-	[[nodiscard]] std::ranges::range_value_t<R> pick(R &&range) {
+	template <rngs::random_access_range R>
+		requires rngs::borrowed_range<R> &&
+				 std::copy_constructible<rngs::range_value_t<R>>
+	[[nodiscard]] auto pick(R &&range) -> rngs::range_value_t<R> {
 		std::scoped_lock lock{mutex_};
 		return rng::pick(engine_, std::forward<R>(range));
 	}
 
-	void fill_bytes(std::span<std::byte> out) {
+	auto fill_bytes(std::span<std::byte> out) -> void {
 		std::scoped_lock lock{mutex_};
 		rng::fill_bytes(engine_, out);
 	}
 
-	void discard(unsigned long long n) {
+	auto discard(unsigned long long n) -> void {
 		std::scoped_lock lock{mutex_};
 		engine_.discard(n);
 	}
 
-	void jump()
+	auto jump() -> void
 		requires prng::concepts::jumpable_engine<Engine>
 	{
 		std::scoped_lock lock{mutex_};
 		engine_.jump();
 	}
 
-	void long_jump()
+	auto long_jump() -> void
 		requires prng::concepts::jumpable_engine<Engine>
 	{
 		std::scoped_lock lock{mutex_};
 		engine_.long_jump();
 	}
 
-	[[nodiscard]] state_type state() const
+	[[nodiscard]] auto state() const -> state_type
 		requires prng::concepts::checkpointable_engine<Engine>
 	{
 		std::scoped_lock lock{mutex_};
 		return engine_.state();
 	}
 
-	[[nodiscard]] bool is_valid() const
+	[[nodiscard]] auto is_valid() const -> bool
 		requires prng::concepts::checkpointable_engine<Engine>
 	{
 		std::scoped_lock lock{mutex_};
 		return engine_.is_valid();
 	}
 
-	bool set_state(const state_type &state)
+	auto set_state(const state_type &state) -> bool
 		requires prng::concepts::checkpointable_engine<Engine>
 	{
 		std::scoped_lock lock{mutex_};
@@ -522,7 +535,7 @@ public:
 	// Advanced escape hatch for operations that must be atomic as a batch.
 	// The callback must return by value; return a reference would escape the
 	// lock and reintroduce a race.
-	template <class F> decltype(auto) with_lock(F &&function) {
+	template <class F> auto with_lock(F &&function) -> decltype(auto) {
 		using result = std::invoke_result_t<F, Engine &>;
 		static_assert(!std::is_reference_v<result>,
 					  "with_lock callback must return by value");
@@ -543,15 +556,15 @@ private:
 template <class Engine = prng::xoshiro256pp>
 	requires engine<Engine> && prng::concepts::seedable_engine<Engine> &&
 			 std::default_initializable<Engine> && std::copyable<Engine>
-[[nodiscard]] inline stream<Engine> make_stream() {
+[[nodiscard]] inline auto make_stream() -> stream<Engine> {
 	const auto words = entropy_seed();
-	return stream<Engine>(std::span<const std::uint32_t>{words});
+	return stream<Engine>(std::span<const u32>{words});
 }
 
 template <class Engine = prng::xoshiro256pp>
 	requires engine<Engine> && prng::concepts::seedable_engine<Engine> &&
 			 std::default_initializable<Engine> && std::copyable<Engine>
-[[nodiscard]] constexpr stream<Engine> make_stream(std::uint64_t seed_value) {
+[[nodiscard]] constexpr auto make_stream(u64 seed_value) -> stream<Engine> {
 	return stream<Engine>(seed_value);
 }
 
@@ -560,13 +573,14 @@ template <class Engine = prng::xoshiro256pp>
 template <class Engine = prng::xoshiro256pp>
 	requires engine<Engine> && prng::concepts::jumpable_engine<Engine> &&
 			 std::default_initializable<Engine> && std::copyable<Engine>
-[[nodiscard]] constexpr std::vector<stream<Engine>>
-split_streams(const stream<Engine> &base, std::size_t count) {
+[[nodiscard]] constexpr auto split_streams(const stream<Engine> &base,
+										   size_t count)
+	-> std::vector<stream<Engine>> {
 	std::vector<stream<Engine>> streams;
 	streams.reserve(count);
 
 	stream<Engine> current = base;
-	for (std::size_t i = 0; i < count; ++i) {
+	for (size_t i = 0; i < count; ++i) {
 		streams.push_back(current);
 		if (i + 1 < count) {
 			current.jump();
@@ -582,48 +596,49 @@ split_streams(const stream<Engine> &base, std::size_t count) {
 
 // One entropy-seeded stream per thread.  Thread-local initialization is
 // thread-safe; the returned stream must not be shared with another thread.
-[[nodiscard]] inline stream<> &thread_rng() {
+[[nodiscard]] inline auto thread_rng() -> stream<> &{
 	thread_local stream<> instance = make_stream();
 	return instance;
 }
 
 // Free functions for the common "just give me a random number" cases.
 // They use thread_rng() and are therefore safe to call from any thread.
-template <integer T> [[nodiscard]] inline T random_int(T lo, T hi) {
+template <integer T> [[nodiscard]] inline auto random_int(T lo, T hi) -> T {
 	return thread_rng().uniform(lo, hi);
 }
 
-template <real F> [[nodiscard]] inline F random_real(F lo = F{0}, F hi = F{1}) {
+template <real F>
+[[nodiscard]] inline auto random_real(F lo = F{0}, F hi = F{1}) -> F {
 	return thread_rng().uniform(lo, hi);
 }
 
-[[nodiscard]] inline bool random_bool(double p = 0.5) {
+[[nodiscard]] inline auto random_bool(double p = 0.5) -> bool {
 	return thread_rng().coin(p);
 }
 
-[[nodiscard]] inline double random_normal(double mean = 0.0,
-										  double stddev = 1.0) {
+[[nodiscard]] inline auto random_normal(double mean = 0.0, double stddev = 1.0)
+	-> double {
 	return thread_rng().normal(mean, stddev);
 }
 
-[[nodiscard]] inline double random_exponential(double rate = 1.0) {
+[[nodiscard]] inline auto random_exponential(double rate = 1.0) -> double {
 	return thread_rng().exponential(rate);
 }
 
-template <std::ranges::random_access_range R>
-	requires std::permutable<std::ranges::iterator_t<R>>
-inline void random_shuffle(R &&range) {
+template <rngs::random_access_range R>
+	requires std::permutable<rngs::iterator_t<R>>
+inline auto random_shuffle(R &&range) -> void {
 	thread_rng().shuffle(std::forward<R>(range));
 }
 
-template <std::ranges::random_access_range R>
-	requires std::ranges::borrowed_range<R> &&
-			 std::copy_constructible<std::ranges::range_value_t<R>>
-[[nodiscard]] inline std::ranges::range_value_t<R> random_pick(R &&range) {
+template <rngs::random_access_range R>
+	requires rngs::borrowed_range<R> &&
+			 std::copy_constructible<rngs::range_value_t<R>>
+[[nodiscard]] inline auto random_pick(R &&range) -> rngs::range_value_t<R> {
 	return thread_rng().pick(std::forward<R>(range));
 }
 
-inline void random_fill_bytes(std::span<std::byte> out) {
+inline auto random_fill_bytes(std::span<std::byte> out) -> void {
 	thread_rng().fill_bytes(out);
 }
 

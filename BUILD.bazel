@@ -1,0 +1,83 @@
+# Bazel build for ConcurrentCpp.
+#
+# Mirrors the non-PGO part of CMakeLists.txt:
+#   * CoucurrentCpp   <- main.cpp (+ src/*.cpp)
+#   * ConcurrentBench <- benchmark/benchmark.cpp
+#
+# The PGO/LTO logic in cmake/pgo.cmake is intentionally not ported.
+
+load("@rules_cc//cc:cc_binary.bzl", "cc_binary")
+load("@rules_cc//cc:cc_library.bzl", "cc_library")
+
+package(default_visibility = ["//visibility:public"])
+
+# CMake sets the C++20 standard and enables warnings on the project targets
+# only (never on absl/benchmark).  The flags are selected by compiler rather
+# than by OS, so `--compiler=mingw-gcc` (MSYS2 clang/GCC) does not receive
+# MSVC-style options.
+_MSVC_COPTS = [
+    "/std:c++20",
+    "/W4",
+    "/Zc:preprocessor",
+]
+
+_CLANG_CL_COPTS = [
+    "/std:c++20",
+    "/W4",
+]
+
+_GNU_COPTS = [
+    "-std=c++20",
+    "-Wall",
+    "-Wextra",
+]
+
+_COPTS = select({
+    "@rules_cc//cc/compiler:msvc-cl": _MSVC_COPTS,
+    "@rules_cc//cc/compiler:clang-cl": _CLANG_CL_COPTS,
+    "//conditions:default": _GNU_COPTS,
+})
+
+# CMake links with -static on non-MSVC toolchains.
+_LINKOPTS = select({
+    "@rules_cc//cc/compiler:msvc-cl": [],
+    "@rules_cc//cc/compiler:clang-cl": [],
+    "//conditions:default": ["-static"],
+})
+
+# The concurrent containers are header-only under include/.
+# strip_include_prefix makes them visible as "common/..." and "stacks/...",
+# matching the #include paths used by the sources.
+cc_library(
+    name = "concurrentcpp",
+    hdrs = glob(["include/**/*.hpp"]),
+    strip_include_prefix = "include",
+    deps = [
+        "@abseil-cpp//absl/synchronization",
+    ],
+)
+
+cc_binary(
+    name = "CoucurrentCpp",
+    # src/ is currently empty; allow_empty keeps the glob equivalent to CMake's
+    # `file(GLOB SRC_FILES src/*.cpp)`.
+    srcs = ["main.cpp"] + glob(["src/*.cpp"], allow_empty = True),
+    copts = _COPTS,
+    linkopts = _LINKOPTS,
+    deps = [
+        ":concurrentcpp",
+        "@abseil-cpp//absl/synchronization",
+    ],
+)
+
+cc_binary(
+    name = "ConcurrentBench",
+    srcs = ["benchmark/benchmark.cpp"],
+    copts = _COPTS,
+    linkopts = _LINKOPTS,
+    deps = [
+        ":concurrentcpp",
+        "@abseil-cpp//absl/synchronization",
+        "@google_benchmark//:benchmark",
+    ],
+)

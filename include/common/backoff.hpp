@@ -4,8 +4,8 @@
  * @file backoff.hpp
  * @author modelTR (mxtian_ran@163.com)
  * @brief A simple implenment of mutex backoff
- * @version 0.1
- * @date 2026-11-02
+ * @version 0.2
+ * @date 2026-11-23
  * @copyright MIT License (c) 2026
  *
  */
@@ -77,7 +77,7 @@ public:
 	auto unlock() -> void { state_.clear(); }
 
 private:
-	std::atomic_flag state_ = false;
+	std::atomic_flag state_;
 	static const int MAX_DELAY = 100;
 	static const int MIN_DELAY = 5;
 	static const int RETRY_TIME = 5;
