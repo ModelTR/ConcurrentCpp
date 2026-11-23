@@ -122,6 +122,7 @@ test_sources = [
   'tests/smoke_primitives_test.cpp',
   'tests/smoke_random_test.cpp',
   'tests/smoke_stacks_test.cpp',
+  'tests/unit_concurrent_stacks_test.cpp',
 ]
 
 test_exe = executable(

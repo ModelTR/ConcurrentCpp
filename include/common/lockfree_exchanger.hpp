@@ -122,7 +122,7 @@ public:
 	}
 
 private:
-	static auto transition_to(uintptr new_payload) noexcept {
+	static auto transition_to(uintptr new_payload) noexcept -> decltype(auto) {
 		return details::tag_transition<
 			details::AtomicTaggedPtr<T, 16>::TAG_BITS, 2>(new_payload);
 	}

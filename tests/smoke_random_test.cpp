@@ -12,13 +12,13 @@
 #include <algorithm>
 #include <array>
 #include <cstddef>
-#include <vector>
 
+#include "common/alias.hpp"
 #include "common/random.hpp"
 
 namespace {
 
-TEST(RandomSmoke, UniformDrawsStayInRange) {
+TEST(RANDOM_SMOKE, UNIFORM_DRAWS_STAY_IN_RANGE) {
 	auto stream = rng::make_stream(42ull);
 
 	for (int i = 0; i < 128; ++i) {
@@ -37,13 +37,13 @@ TEST(RandomSmoke, UniformDrawsStayInRange) {
 	EXPECT_TRUE(rng::random_bool(1.0));
 }
 
-TEST(RandomSmoke, ShufflePickFillAndSynchronizedStream) {
+TEST(RANDOM_SMOKE, SHUFFLE_PICK_FILL_AND_SYNCHRONIZED_STREAM) {
 	auto stream = rng::make_stream(7ull);
-	std::vector<int> values{1, 2, 3, 4, 5};
+	vec<int> values{1, 2, 3, 4, 5};
 
 	stream.shuffle(values);
 	std::sort(values.begin(), values.end());
-	EXPECT_EQ(values, (std::vector<int>{1, 2, 3, 4, 5}));
+	EXPECT_EQ(values, (vec<int>{1, 2, 3, 4, 5}));
 
 	const int picked = stream.pick(values);
 	EXPECT_TRUE(picked == 10 || (picked >= 1 && picked <= 5));

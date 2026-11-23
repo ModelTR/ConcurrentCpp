@@ -270,10 +270,76 @@
     ],
     "testPresets": [
         {
+            "name": "CTest Base",
+            "hidden": true,
+            "output": {
+                "outputOnFailure": true
+            },
+            "execution": {
+                "noTestsAction": "error",
+                "stopOnFailure": false,
+                "timeout": 120
+            }
+        },
+        {
             "name": "UCRT Clang x64-debug ctest",
-            "description": "",
-            "displayName": "",
-            "configurePreset": "MSYS2 UCRT Clang x64-debug"
+            "configurePreset": "MSYS2 UCRT Clang x64-debug",
+            "inherits": "CTest Base"
+        },
+        {
+            "name": "UCRT Clang x64-release ctest",
+            "configurePreset": "MSYS2 UCRT Clang x64-release",
+            "inherits": "CTest Base"
+        },
+        {
+            "name": "UCRT Clang x86-debug ctest",
+            "configurePreset": "MSYS2 UCRT Clang x86-debug",
+            "inherits": "CTest Base"
+        },
+        {
+            "name": "UCRT Clang x86-release ctest",
+            "configurePreset": "MSYS2 UCRT Clang x86-release",
+            "inherits": "CTest Base"
+        },
+        {
+            "name": "MSVC x64-debug ctest",
+            "configurePreset": "MSVC x64-debug",
+            "inherits": "CTest Base"
+        },
+        {
+            "name": "MSVC x64-release ctest",
+            "configurePreset": "MSVC x64-release",
+            "inherits": "CTest Base"
+        },
+        {
+            "name": "MSVC x86-debug ctest",
+            "configurePreset": "MSVC x86-debug",
+            "inherits": "CTest Base"
+        },
+        {
+            "name": "MSVC x86-release ctest",
+            "configurePreset": "MSVC x86-release",
+            "inherits": "CTest Base"
+        },
+        {
+            "name": "UCRT GCC x64-debug ctest",
+            "configurePreset": "MSYS2 UCRT GCC x64-debug",
+            "inherits": "CTest Base"
+        },
+        {
+            "name": "UCRT GCC x64-release ctest",
+            "configurePreset": "MSYS2 UCRT GCC x64-release",
+            "inherits": "CTest Base"
+        },
+        {
+            "name": "UCRT GCC x86-debug ctest",
+            "configurePreset": "MSYS2 UCRT GCC x86-debug",
+            "inherits": "CTest Base"
+        },
+        {
+            "name": "UCRT GCC x86-release ctest",
+            "configurePreset": "MSYS2 UCRT GCC x86-release",
+            "inherits": "CTest Base"
         }
     ]
 }

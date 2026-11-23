@@ -102,7 +102,7 @@ template <std::unsigned_integral U, engine G>
 // Uniform value in [0, bound), without modulo bias.  bound == 0 maps to 0;
 // callers that require non-empty ranges check that precondition themselves.
 template <std::unsigned_integral U, engine G>
-[[nodiscard]] constexpr U bounded(G &g, U bound) noexcept {
+[[nodiscard]] constexpr auto bounded(G &g, U bound) noexcept -> U {
 	if (bound == 0) {
 		return 0;
 	}
@@ -160,7 +160,7 @@ template <real F, engine G>
 	}
 
 	constexpr int DIGITS = std::numeric_limits<F>::digits;
-	const auto value = detail::next_unsigned<std::uint64_t>(g);
+	const auto value = detail::next_unsigned<u64>(g);
 	const u64 mantissa = value >> (64U - static_cast<unsigned>(DIGITS));
 
 	const F unit =
@@ -344,9 +344,7 @@ public:
 		rng::fill_bytes(engine_, out);
 	}
 
-	constexpr auto discard(unsigned long long n) noexcept -> void {
-		engine_.discard(n);
-	}
+	constexpr auto discard(u64 n) noexcept -> void { engine_.discard(n); }
 
 	constexpr auto jump() noexcept -> void
 		requires prng::concepts::jumpable_engine<Engine>
@@ -492,7 +490,7 @@ public:
 		rng::fill_bytes(engine_, out);
 	}
 
-	auto discard(unsigned long long n) -> void {
+	auto discard(u64 n) -> void {
 		std::scoped_lock lock{mutex_};
 		engine_.discard(n);
 	}
@@ -575,8 +573,8 @@ template <class Engine = prng::xoshiro256pp>
 			 std::default_initializable<Engine> && std::copyable<Engine>
 [[nodiscard]] constexpr auto split_streams(const stream<Engine> &base,
 										   size_t count)
-	-> std::vector<stream<Engine>> {
-	std::vector<stream<Engine>> streams;
+	-> vec<stream<Engine>> {
+	vec<stream<Engine>> streams;
 	streams.reserve(count);
 
 	stream<Engine> current = base;
@@ -596,7 +594,7 @@ template <class Engine = prng::xoshiro256pp>
 
 // One entropy-seeded stream per thread.  Thread-local initialization is
 // thread-safe; the returned stream must not be shared with another thread.
-[[nodiscard]] inline auto thread_rng() -> stream<> &{
+[[nodiscard]] inline auto thread_rng() -> stream<> & {
 	thread_local stream<> instance = make_stream();
 	return instance;
 }

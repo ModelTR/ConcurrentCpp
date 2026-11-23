@@ -16,7 +16,7 @@
 
 namespace {
 
-TEST(InplaceVectorSmoke, DefaultConstructedIsEmpty) {
+TEST(INPLACE_VECTOR_SMOKE, DEFAULT_CONSTRUCTED_IS_EMPTY) {
 	concur::inplace_vector<int, 4> values;
 
 	EXPECT_TRUE(values.empty());
@@ -24,7 +24,7 @@ TEST(InplaceVectorSmoke, DefaultConstructedIsEmpty) {
 	EXPECT_EQ(values.capacity(), std::size_t{4});
 }
 
-TEST(InplaceVectorSmoke, PushPopAndCapacityLimit) {
+TEST(INPLACE_VECTOR_SMOKE, PUSH_POP_AND_CAPACITY_LIMIT) {
 	concur::inplace_vector<int, 2> values{1};
 
 	values.push_back(2);

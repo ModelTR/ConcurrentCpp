@@ -5,7 +5,7 @@
  * These only exercise the documented happy paths plus the bounded push/pop
  * failure paths that are guaranteed to return.  Operations that block until
  * another thread makes progress (an empty LockFreeStack::pop(), for example)
- * are intentionally left to dedicated unit tests.
+ * are left to the unit tests.
  */
 
 #include <gtest/gtest.h>
@@ -19,7 +19,7 @@
 
 namespace {
 
-TEST(MutexStackSmoke, DefaultConstructedIsEmpty) {
+TEST(MUTEX_STACK_SMOKE, DEFAULT_CONSTRUCTED_IS_EMPTY) {
 	concur::Stack<int, 4> stack;
 
 	EXPECT_TRUE(stack.empty());
@@ -27,7 +27,7 @@ TEST(MutexStackSmoke, DefaultConstructedIsEmpty) {
 	EXPECT_EQ(stack.capacity(), std::size_t{4});
 }
 
-TEST(MutexStackSmoke, PushPopIsLifo) {
+TEST(MUTEX_STACK_SMOKE, PUSH_POP_IS_LIFO) {
 	concur::Stack<int, 4> stack;
 
 	EXPECT_TRUE(stack.push(1));
@@ -45,7 +45,7 @@ TEST(MutexStackSmoke, PushPopIsLifo) {
 	EXPECT_TRUE(stack.empty());
 }
 
-TEST(MutexStackSmoke, FullAndEmptyBoundaries) {
+TEST(MUTEX_STACK_SMOKE, FULL_AND_EMPTY_BOUNDARIES) {
 	concur::Stack<int, 2> stack{1, 2};
 
 	EXPECT_EQ(stack.size(), std::size_t{2});
@@ -56,7 +56,7 @@ TEST(MutexStackSmoke, FullAndEmptyBoundaries) {
 	EXPECT_FALSE(stack.pop().has_value());
 }
 
-TEST(MutexStackSmoke, ValueConstructorFillsStack) {
+TEST(MUTEX_STACK_SMOKE, VALUE_CONSTRUCTOR_FILLS_STACK) {
 	concur::Stack<int, 3> stack(2, 7);
 
 	ASSERT_EQ(stack.size(), std::size_t{2});
@@ -64,7 +64,7 @@ TEST(MutexStackSmoke, ValueConstructorFillsStack) {
 	EXPECT_EQ(stack.pop(), std::optional<int>{7});
 }
 
-TEST(LockFreeStackSmoke, DefaultConstructedIsEmpty) {
+TEST(LOCKFREE_STACK_SMOKE, DEFAULT_CONSTRUCTED_IS_EMPTY) {
 	concur::LockFreeStack<int, 4> stack;
 
 	EXPECT_TRUE(stack.empty());
@@ -73,7 +73,7 @@ TEST(LockFreeStackSmoke, DefaultConstructedIsEmpty) {
 	EXPECT_EQ(stack.capacity(), std::size_t{4});
 }
 
-TEST(LockFreeStackSmoke, PushPopIsLifo) {
+TEST(LOCKFREE_STACK_SMOKE, PUSH_POP_IS_LIFO) {
 	concur::LockFreeStack<int, 4> stack;
 
 	EXPECT_TRUE(stack.push(1));
@@ -91,7 +91,7 @@ TEST(LockFreeStackSmoke, PushPopIsLifo) {
 	EXPECT_TRUE(stack.empty());
 }
 
-TEST(LockFreeStackSmoke, InitializerListConstructionPopsInReverse) {
+TEST(LOCKFREE_STACK_SMOKE, INITIALIZER_LIST_CONSTRUCTION_POPS_IN_REVERSE) {
 	concur::LockFreeStack<int, 4> stack{1, 2, 3};
 
 	ASSERT_EQ(stack.size(), std::size_t{3});
@@ -100,7 +100,7 @@ TEST(LockFreeStackSmoke, InitializerListConstructionPopsInReverse) {
 	EXPECT_EQ(stack.pop(), std::optional<int>{1});
 }
 
-TEST(LockFreeStackSmoke, PushAfterInitialization) {
+TEST(LOCKFREE_STACK_SMOKE, PUSH_AFTER_INITIALIZATION) {
 	concur::LockFreeStack<int, 4> stack{1, 2, 3};
 
 	EXPECT_TRUE(stack.push(4));
@@ -111,7 +111,7 @@ TEST(LockFreeStackSmoke, PushAfterInitialization) {
 	EXPECT_FALSE(stack.full());
 }
 
-TEST(ElimiBackoffStackSmoke, DefaultConstructedIsEmpty) {
+TEST(ELIMI_BACKOFF_STACK_SMOKE, DEFAULT_CONSTRUCTED_IS_EMPTY) {
 	concur::ElimiBackoffStack<int, 4> stack;
 
 	EXPECT_TRUE(stack.empty());
@@ -119,7 +119,7 @@ TEST(ElimiBackoffStackSmoke, DefaultConstructedIsEmpty) {
 	EXPECT_EQ(stack.capacity(), std::size_t{4});
 }
 
-TEST(ElimiBackoffStackSmoke, PushPopIsLifo) {
+TEST(ELIMI_BACKOFF_STACK_SMOKE, PUSH_POP_IS_LIFO) {
 	concur::ElimiBackoffStack<int, 4> stack;
 
 	EXPECT_TRUE(stack.push(1));
@@ -135,7 +135,7 @@ TEST(ElimiBackoffStackSmoke, PushPopIsLifo) {
 	EXPECT_EQ(*bottom, 1);
 }
 
-TEST(ElimiBackoffStackSmoke, InitializerListConstruction) {
+TEST(ELIMI_BACKOFF_STACK_SMOKE, INITIALIZER_LIST_CONSTRUCTION) {
 	concur::ElimiBackoffStack<int, 4> stack{1, 2, 3};
 
 	ASSERT_EQ(stack.size(), std::size_t{3});

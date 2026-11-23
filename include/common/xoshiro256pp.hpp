@@ -211,7 +211,7 @@ concept seed_sequence_like = requires(S &seq, u32 *p) {
 template <class G>
 concept random_engine =
     std::uniform_random_bit_generator<G> &&
-    requires(G g, const G cg, unsigned long long n) {
+    requires(G g, const G cg, u64 n) {
         typename G::result_type;
         typename G::state_type;
         { G::min() } -> std::same_as<typename G::result_type>;
@@ -234,7 +234,7 @@ concept seedable_engine =
 
 template <class G>
 concept discardable_engine =
-    std::uniform_random_bit_generator<G> && requires(G g, unsigned long long n) {
+    std::uniform_random_bit_generator<G> && requires(G g, u64 n) {
     { g.discard(n) } -> std::same_as<void>;
 };
 
@@ -263,7 +263,7 @@ concept comparable_engine =
 
 template <class G>
 concept nothrow_engine =
-    std::uniform_random_bit_generator<G> && requires(G g, unsigned long long n) {
+    std::uniform_random_bit_generator<G> && requires(G g, u64 n) {
     { g() } noexcept -> std::same_as<typename G::result_type>;
     { g.discard(n) } noexcept -> std::same_as<void>;
 };
@@ -315,7 +315,7 @@ public:
     XOSHIRO256PP_STATIC_ASSERT(concepts::xoshiro_word<result_type>);
     XOSHIRO256PP_STATIC_ASSERT(std::is_unsigned_v<result_type>);
     XOSHIRO256PP_STATIC_ASSERT(std::numeric_limits<result_type>::digits == 64);
-    XOSHIRO256PP_STATIC_ASSERT(sizeof(result_type) == sizeof(std::uint64_t));
+    XOSHIRO256PP_STATIC_ASSERT(sizeof(result_type) == sizeof(u64));
     XOSHIRO256PP_STATIC_ASSERT(WORD_SIZE == 64);
     XOSHIRO256PP_STATIC_ASSERT(STATE_WORD_COUNT == 4);
     XOSHIRO256PP_STATIC_ASSERT(STATE_SIZE == 256);
@@ -388,7 +388,7 @@ public:
 
     constexpr auto next() noexcept -> result_type { return (*this)(); }
 
-    constexpr auto discard(unsigned long long n) noexcept -> void{
+    constexpr auto discard(u64 n) noexcept -> void {
         XOSHIRO256PP_ASSERT_PARANOID(is_valid());
         while (n-- != 0) {
             (void)(*this)();

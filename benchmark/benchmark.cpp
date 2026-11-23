@@ -75,15 +75,15 @@ using EmiSlot128 = concur::ElimiBackoffStack<int, 64, 128>;
 using EmiCapacity256 = concur::ElimiBackoffStack<int, 256, 64>;
 using EmiCapacity1024 = concur::ElimiBackoffStack<int, 1024, 64>;
 
-double stat_min(const vec<double> &v) {
+auto stat_min(const vec<double> &v) -> double {
 	return v.empty() ? 0.0 : *rngs::min_element(v);
 }
 
-double stat_max(const vec<double> &v) {
+auto stat_max(const vec<double> &v) -> double {
 	return v.empty() ? 0.0 : *rngs::max_element(v);
 }
 
-double stat_range(const vec<double> &v) {
+auto stat_range(const vec<double> &v) -> double {
 	if (v.empty()) {
 		return 0.0;
 	}
@@ -91,7 +91,7 @@ double stat_range(const vec<double> &v) {
 	return *hi - *lo;
 }
 
-double stat_percentile(const vec<double> &v, double p) {
+auto stat_percentile(const vec<double> &v, double p) -> double {
 	if (v.empty()) {
 		return 0.0;
 	}
@@ -103,13 +103,23 @@ double stat_percentile(const vec<double> &v, double p) {
 	return sorted[std::min(rank, sorted.size() - 1)];
 }
 
-double stat_p99(const vec<double> &v) { return stat_percentile(v, 0.99); }
-double stat_p50(const vec<double> &v) { return stat_percentile(v, 0.50); }
-double stat_p90(const vec<double> &v) { return stat_percentile(v, 0.90); }
-double stat_p95(const vec<double> &v) { return stat_percentile(v, 0.95); }
-double stat_p999(const vec<double> &v) { return stat_percentile(v, 0.999); }
+auto stat_p99(const vec<double> &v) -> double {
+	return stat_percentile(v, 0.99);
+}
+auto stat_p50(const vec<double> &v) -> double {
+	return stat_percentile(v, 0.50);
+}
+auto stat_p90(const vec<double> &v) -> double {
+	return stat_percentile(v, 0.90);
+}
+auto stat_p95(const vec<double> &v) -> double {
+	return stat_percentile(v, 0.95);
+}
+auto stat_p999(const vec<double> &v) -> double {
+	return stat_percentile(v, 0.999);
+}
 
-double stat_iqr(const vec<double> &v) {
+auto stat_iqr(const vec<double> &v) -> double {
 	return stat_percentile(v, 0.75) - stat_percentile(v, 0.25);
 }
 
@@ -142,7 +152,7 @@ auto add_extra_stats(::benchmark::Benchmark *b) -> void {
 template <typename Stack> struct Shared {
 	std::atomic<Stack *> ptr{nullptr};
 	std::unique_ptr<Stack> owned; // written by thread 0 only
-	std::atomic<int> done{0};
+	atomic::i32 done{0};
 	std::atomic<long> push_fail{0};
 	std::atomic<long> pop_empty{0};
 	int nthreads = 0;
@@ -662,7 +672,7 @@ public:
 		return true;
 	}
 
-	auto ReportRuns(const std::vector<Run> &reports) -> void override {
+	auto ReportRuns(const vec<Run> &reports) -> void override {
 		if (reports.empty()) {
 			return;
 		}
@@ -711,24 +721,24 @@ public:
 } // namespace
 // NOLINTEND(bugprone-throwing-static-initialization)
 
-int main(int argc, char **argv) {
+auto main(int argc, char **argv) -> int {
 
 	bool has_repetitions = false;
 	bool has_interleaving = false;
 	bool has_min_time = false;
-	std::string out_path = "benchmark_results.json";
+	str out_path = "benchmark_results.json";
 
 	for (int i = 1; i < argc; ++i) {
-		std::string_view arg = argv[i];
+		str_vw arg = argv[i];
 		if (arg.starts_with("--benchmark_repetitions"))
 			has_repetitions = true;
 		if (arg.starts_with("--benchmark_enable_random_interleaving"))
 			has_interleaving = true;
 		if (arg.starts_with("--benchmark_min_time"))
 			has_min_time = true;
-		constexpr std::string_view out_prefix = "--benchmark_out=";
+		constexpr str_vw out_prefix = "--benchmark_out=";
 		if (arg.starts_with(out_prefix)) {
-			out_path = std::string(arg.substr(out_prefix.size()));
+			out_path = str(arg.substr(out_prefix.size()));
 		}
 	}
 
@@ -746,7 +756,7 @@ int main(int argc, char **argv) {
 	// RunSpecifiedBenchmarks(display, file) requires the library's
 	// --benchmark_out flag to be present even though we supply our own
 	// JSONReporter writing to the same path.
-	std::string out_flag = "--benchmark_out=" + out_path;
+	str out_flag = "--benchmark_out=" + out_path;
 	new_argv.push_back(out_flag.c_str());
 
 	int new_argc = static_cast<int>(new_argv.size());

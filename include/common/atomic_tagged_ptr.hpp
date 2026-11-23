@@ -129,8 +129,7 @@ private:
 	template <bool Weak>
 	auto compare_exchange_impl(pointer &expected_p, uintptr &expected_t,
 							   pointer desired_p, uintptr desired_t,
-							   std::memory_order succ,
-							   std::memory_order fail) noexcept -> bool {
+							   memorder succ, memorder fail) noexcept -> bool {
 		auto expected = pack(expected_p, expected_t);
 		const auto desired = pack(desired_p, desired_t);
 
@@ -154,10 +153,8 @@ private:
 
 	template <bool Weak>
 	auto compare_exchange_inc_tag_impl(pointer &expected_p, uintptr &expected_t,
-									   pointer desired_p,
-									   std::memory_order succ,
-									   std::memory_order fail) noexcept
-		-> bool {
+									   pointer desired_p, memorder succ,
+									   memorder fail) noexcept -> bool {
 		const auto next_tag = (expected_t + uintptr{1}) & LOGICAL_TAG_MASK;
 		return compare_exchange_impl<Weak>(expected_p, expected_t, desired_p,
 										   next_tag, succ, fail);
@@ -166,8 +163,7 @@ private:
 	template <bool Weak, class NextTag>
 	auto compare_exchange_next(pointer &expected_p, uintptr &expected_t,
 							   pointer desired_p, NextTag &&next_t,
-							   std::memory_order succ,
-							   std::memory_order fail) noexcept -> bool {
+							   memorder succ, memorder fail) noexcept -> bool {
 		const auto desired_tag = static_cast<uintptr>(
 			std::invoke(std::forward<NextTag>(next_t), expected_t));
 		return compare_exchange_impl<Weak>(expected_p, expected_t, desired_p,
@@ -189,14 +185,12 @@ public:
 		: packed_(pack(ptr, tag)) {}
 
 	[[nodiscard]]
-	auto get(std::memory_order order = memorder::acquire) const noexcept
-		-> pointer {
+	auto get(memorder order = memorder::acquire) const noexcept -> pointer {
 		return ptr_of(packed_.load(order));
 	}
 
 	[[nodiscard]]
-	auto get_tag(std::memory_order order = memorder::relaxed) const noexcept
-		-> uintptr {
+	auto get_tag(memorder order = memorder::relaxed) const noexcept -> uintptr {
 		return tag_of(packed_.load(order));
 	}
 
@@ -207,66 +201,69 @@ public:
 
 	/// @attention API changed.
 	[[nodiscard]]
-	auto snapshot(std::memory_order order = memorder::acquire) const noexcept
+	auto snapshot(memorder order = memorder::acquire) const noexcept
 		-> Snapshot {
 		auto packed = packed_.load(order);
 		return {ptr_of(packed), tag_of(packed)};
 	}
 
 	auto store(pointer ptr, uintptr tag,
-			   std::memory_order order = memorder::release) noexcept -> void {
+			   memorder order = memorder::release) noexcept -> void {
 		packed_.store(pack(ptr, tag), order);
 	}
 
 	template <class NextTag>
 		requires std::is_invocable_r_v<uintptr, NextTag, uintptr>
 	auto store(pointer ptr, NextTag &&next_t,
-			   std::memory_order order = memorder::release) noexcept -> void {
+			   memorder order = memorder::release) noexcept -> void {
 		const auto current_tag = tag_of(packed_.load(memorder::relaxed));
 		const auto next_tag_value = static_cast<uintptr>(
 			std::invoke(std::forward<NextTag>(next_t), current_tag));
 		packed_.store(pack(ptr, next_tag_value), order);
 	}
 
-	auto compare_exchange_weak(
-		pointer &expected_p, uintptr &expected_t, pointer desired_p,
-		std::memory_order succ = memorder::seq_cst,
-		std::memory_order fail = memorder::seq_cst) noexcept -> bool {
+	auto compare_exchange_weak(pointer &expected_p, uintptr &expected_t,
+							   pointer desired_p,
+							   memorder succ = memorder::seq_cst,
+							   memorder fail = memorder::seq_cst) noexcept
+		-> bool {
 		return compare_exchange_inc_tag_impl<true>(expected_p, expected_t,
 												   desired_p, succ, fail);
 	}
 
-	auto compare_exchange_strong(
-		pointer &expected_p, uintptr &expected_t, pointer desired_p,
-		std::memory_order succ = memorder::seq_cst,
-		std::memory_order fail = memorder::seq_cst) noexcept -> bool {
+	auto compare_exchange_strong(pointer &expected_p, uintptr &expected_t,
+								 pointer desired_p,
+								 memorder succ = memorder::seq_cst,
+								 memorder fail = memorder::seq_cst) noexcept
+		-> bool {
 		return compare_exchange_inc_tag_impl<false>(expected_p, expected_t,
 													desired_p, succ, fail);
 	}
 
-	auto compare_exchange_weak(
-		pointer &expected_p, uintptr &expected_t, pointer desired_p,
-		uintptr desired_t, std::memory_order succ = memorder::seq_cst,
-		std::memory_order fail = memorder::seq_cst) noexcept -> bool {
+	auto compare_exchange_weak(pointer &expected_p, uintptr &expected_t,
+							   pointer desired_p, uintptr desired_t,
+							   memorder succ = memorder::seq_cst,
+							   memorder fail = memorder::seq_cst) noexcept
+		-> bool {
 		return compare_exchange_impl<true>(expected_p, expected_t, desired_p,
 										   desired_t, succ, fail);
 	}
 
-	auto compare_exchange_strong(
-		pointer &expected_p, uintptr &expected_t, pointer desired_p,
-		uintptr desired_t, std::memory_order succ = memorder::seq_cst,
-		std::memory_order fail = memorder::seq_cst) noexcept -> bool {
+	auto compare_exchange_strong(pointer &expected_p, uintptr &expected_t,
+								 pointer desired_p, uintptr desired_t,
+								 memorder succ = memorder::seq_cst,
+								 memorder fail = memorder::seq_cst) noexcept
+		-> bool {
 		return compare_exchange_impl<false>(expected_p, expected_t, desired_p,
 											desired_t, succ, fail);
 	}
 
 	template <class NextTag>
 		requires std::is_invocable_r_v<uintptr, NextTag, uintptr>
-	auto
-	compare_exchange_weak(pointer &expected_p, uintptr &expected_t,
-						  pointer desired_p, NextTag &&next_t,
-						  std::memory_order succ = memorder::seq_cst,
-						  std::memory_order fail = memorder::seq_cst) noexcept
+	auto compare_exchange_weak(pointer &expected_p, uintptr &expected_t,
+							   pointer desired_p, NextTag &&next_t,
+							   memorder succ = memorder::seq_cst,
+							   memorder fail = memorder::seq_cst) noexcept
 		-> bool {
 		return compare_exchange_next<true>(expected_p, expected_t, desired_p,
 										   std::forward<NextTag>(next_t), succ,
@@ -275,11 +272,10 @@ public:
 
 	template <class NextTag>
 		requires std::is_invocable_r_v<uintptr, NextTag, uintptr>
-	auto
-	compare_exchange_strong(pointer &expected_p, uintptr &expected_t,
-							pointer desired_p, NextTag &&next_t,
-							std::memory_order succ = memorder::seq_cst,
-							std::memory_order fail = memorder::seq_cst) noexcept
+	auto compare_exchange_strong(pointer &expected_p, uintptr &expected_t,
+								 pointer desired_p, NextTag &&next_t,
+								 memorder succ = memorder::seq_cst,
+								 memorder fail = memorder::seq_cst) noexcept
 		-> bool {
 		return compare_exchange_next<false>(expected_p, expected_t, desired_p,
 											std::forward<NextTag>(next_t), succ,
@@ -319,7 +315,7 @@ template <unsigned TotalTagBits, unsigned PayloadBits> struct StampedTag {
 };
 
 template <unsigned TotalTagBits, unsigned PayloadBits>
-auto tag_transition(uintptr new_payload) {
+auto tag_transition(uintptr new_payload) -> decltype(auto) {
 	return [new_payload](uintptr expected_tag) -> uintptr {
 		return StampedTag<TotalTagBits, PayloadBits>::decode(expected_tag)
 			.next_tag(new_payload);
@@ -327,7 +323,7 @@ auto tag_transition(uintptr new_payload) {
 }
 
 template <unsigned TotalTagBits, unsigned PayloadBits, class F>
-auto tag_transition_with(F &&f) {
+auto tag_transition_with(F &&f) -> decltype(auto) {
 	return [f = std::forward<F>(f)](uintptr expected_tag) mutable -> uintptr {
 		const auto st =
 			StampedTag<TotalTagBits, PayloadBits>::decode(expected_tag);
