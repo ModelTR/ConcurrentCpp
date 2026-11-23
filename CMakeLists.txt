@@ -55,7 +55,7 @@ file(GLOB SRC_FILES src/*.cpp)
 # --- google::benchmark ----------------------------------------------------
 CPMAddPackage(
     NAME benchmark
-    GIT_REPOSITORY https://gh-proxy.com/https://github.com/google/benchmark.git
+    GIT_REPOSITORY https://v4.gh-proxy.org/https://github.com/google/benchmark.git
     GIT_TAG v1.9.5
     GIT_SHALLOW
     SYSTEM
@@ -65,6 +65,16 @@ CPMAddPackage(
     "BENCHMARK_ENABLE_WERROR OFF"
 )
 # ---------------------------------------------------------------------------
+
+# --- googletest ------------------------------------------------------------
+
+CPMAddPackage(
+  NAME googletest
+  GIT_REPOSITORY https://v4.gh-proxy.org/https://github.com/google/googletest.git
+  GIT_TAG v1.18.0
+  GIT_SHALLOW FALSE
+  OPTIONS "INSTALL_GTEST OFF" "gtest_build_tests OFF" "gmock_build_tests OFF"
+)
 
 # --- absl ------------------------------------------------------------------
 CPMAddPackage(
