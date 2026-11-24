@@ -1,7 +1,7 @@
 # File: CMakeLists.txt
 # Author: modelTR (mxtian_ran@163.com)
 # Brief Serval implemention of concurrent quene (descriptions need to be enriched)
-# Version 0.2
+# Version 0.3
 # Date 2026-11-24
 # Copyright MIT License (c) 2026
 
@@ -15,6 +15,8 @@ set(CMAKE_MSVC_DEBUG_INFORMATION_FORMAT
 project(CoucurrentCpp LANGUAGES CXX)
 
 option(USE_CHACHE ON)
+option(USE_SYSTEM_DEPS
+    "Prefer system benchmark/googletest/absl packages on non-MSVC toolchains" ON)
 
 if(USE_CHACHE)
     find_program(SCCACHE_EXECUTABLE NAMES sccache)
@@ -42,30 +44,44 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 if(NOT MSVC)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -static")
-    # Using lld linker globly
-    add_link_options(-fuse-ld=lld)
+    if(WIN32)
+        #static flag is not valid on Linux or macOS.
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -static")
+    endif()
+    if(WIN32 AND CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+        add_link_options(-fuse-ld=lld)
+    endif()
 endif()
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-# --- PGO / LTO -------------------------------------------------------------
-# PGO=ON selects PGO_MODE=AUTO: configure-time bootstrap (instrumented build +
-# training + profile merge), then this build uses the merged profile.
-# PGO_LTO=THIN and PGO_SCOPE=TARGET keep the optimization on ConcurrentBench
-# only; the benchmark library and absl stay out of the profile.
-if(NOT MSVC)
-    option(PGO "Enable PGO+LTO for the benchmark build" OFF)
-    if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-        set(PGO_LTO FULL)
-    else()
-        # GCC emits its own LTO objects, which ld.lld cannot consume in this
-        # toolchain (it drops symbols such as gtest_main's main).  GCC PGO is
-        # not supported yet, so keep LTO off for GCC.
-        set(PGO_LTO OFF)
+# Keep PGO/LTO enabled for Clang and MSVC only; GCC builds without LTO.
+if(MSVC OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    option(PGO "Enable PGO+LTO for the benchmark build" ON)
+    if(NOT DEFINED PGO_LTO)
+        if(MSVC OR WIN32)
+            set(PGO_LTO FULL)
+        else()
+            find_program(PGO_LLD_EXECUTABLE NAMES ld.lld lld)
+            if(PGO_LLD_EXECUTABLE)
+                set(PGO_LTO FULL)
+            else()
+                set(PGO_LTO OFF)
+                message(STATUS
+                    "PGO/LTO: lld not found; default LTO disabled on this "
+                    "platform (pass -DPGO_LTO=FULL to force it)")
+            endif()
+        endif()
     endif()
     set(PGO_SCOPE GLOBAL)
+    # Set -DPGO_TRAINING_FILTER=.* to train on every benchmark.
+    set(PGO_TRAINING_FILTER ".*" CACHE STRING
+        "Google Benchmark filter for the PGO training workload")
     include(cmake/pgo.cmake)
+else()
+    message(STATUS
+        "PGO/LTO is enabled only for Clang and MSVC; "
+        "skipping for ${CMAKE_CXX_COMPILER_ID}")
 endif()
 # ---------------------------------------------------------------------------
 
@@ -75,43 +91,70 @@ include(cmake/CPM.cmake)
 file(GLOB SRC_FILES src/*.cpp)
 
 # --- google::benchmark ----------------------------------------------------
-CPMAddPackage(
-    NAME benchmark
-    GIT_REPOSITORY https://v4.gh-proxy.org/https://github.com/google/benchmark.git
-    GIT_TAG v1.9.5
-    GIT_SHALLOW
-    SYSTEM
-    OPTIONS 
-    "BENCHMARK_ENABLE_TESTING OFF"
-    "BENCHMARK_ENABLE_INSTALL OFF"
-    "BENCHMARK_ENABLE_WERROR OFF"
-)
-# ---------------------------------------------------------------------------
+if(NOT MSVC AND USE_SYSTEM_DEPS)
+    find_package(benchmark CONFIG QUIET)
+endif()
+
+if(MSVC OR NOT TARGET benchmark::benchmark)
+    CPMAddPackage(
+        NAME benchmark
+        GIT_REPOSITORY https://v4.gh-proxy.org/https://github.com/google/benchmark.git
+        GIT_TAG v1.10.0
+        GIT_SHALLOW
+        SYSTEM
+        OPTIONS
+        "BENCHMARK_ENABLE_TESTING OFF"
+        "BENCHMARK_ENABLE_INSTALL OFF"
+        "BENCHMARK_ENABLE_WERROR OFF"
+    )
+endif()
 
 # --- googletest ------------------------------------------------------------
+if(NOT MSVC AND USE_SYSTEM_DEPS)
+    find_package(GTest CONFIG QUIET)
+    if(NOT TARGET GTest::gtest_main)
+        find_package(gtest CONFIG QUIET)
+    endif()
+endif()
 
-CPMAddPackage(
-  NAME googletest
-  GIT_REPOSITORY https://v4.gh-proxy.org/https://github.com/google/googletest.git
-  GIT_TAG v1.18.0
-  GIT_SHALLOW
-  SYSTEM
-  OPTIONS "INSTALL_GTEST OFF" "gtest_build_tests OFF" "gmock_build_tests OFF"
-  
-)
+if(MSVC OR NOT TARGET GTest::gtest_main)
+    CPMAddPackage(
+        NAME googletest
+        GIT_REPOSITORY https://v4.gh-proxy.org/https://github.com/google/googletest.git
+        GIT_TAG v1.18.0
+        GIT_SHALLOW
+        SYSTEM
+        OPTIONS
+        "INSTALL_GTEST OFF"
+        "gtest_build_tests OFF"
+        "gmock_build_tests OFF"
+    )
+endif()
+
+
 
 # --- absl ------------------------------------------------------------------
-CPMAddPackage(
-  NAME absl
-  GIT_REPOSITORY https://v4.gh-proxy.org/https://github.com/abseil/abseil-cpp.git
-  GIT_TAG 20260817.0
-  GIT_SHALLOW
-  OPTIONS "ABSL_BUILD_TESTING OFF" "ABSL_ENABLE_INSTALL OFF"
-)
-# Windows hasn't O_NONBLOCK
-if(TARGET absl_time_zone)
-  target_compile_definitions(absl_time_zone PRIVATE O_NONBLOCK=0)
+if(NOT MSVC AND USE_SYSTEM_DEPS)
+    find_package(absl CONFIG QUIET)
 endif()
+
+if(MSVC OR NOT TARGET absl::synchronization)
+    CPMAddPackage(
+        NAME absl
+        GIT_REPOSITORY https://v4.gh-proxy.org/https://github.com/abseil/abseil-cpp.git
+        GIT_TAG 20260817.0
+        GIT_SHALLOW
+        OPTIONS
+        "ABSL_BUILD_TESTING OFF"
+        "ABSL_ENABLE_INSTALL OFF"
+    )
+    # Windows hasn't O_NONBLOCK
+    if(TARGET absl_time_zone)
+        target_compile_definitions(absl_time_zone PRIVATE O_NONBLOCK=0)
+    endif()
+endif()
+
+
 # ---------------------------------------------------------------------------
 
 add_executable(CoucurrentCpp
@@ -162,16 +205,19 @@ else()
     target_compile_options(ConcurrentBench PRIVATE /W4 /Zc:preprocessor)
 endif()
 
-# --- PGO training workload -------------------------------------------------6
-# One repetition is enough to produce profile data; the regular benchmark
-# defaults (9 repetitions, full console report) are intentionally overridden.
-if(NOT MSVC)
+# --- PGO training workload -------------------------------------------------
+# The regular benchmark defaults (9 repetitions, full console report) are intentionally overridden with 3.
+# The default filter keeps training fast and deterministic.
+if((MSVC OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+   AND (PGO OR PGO_MODE STREQUAL "GENERATE"))
     pgo_apply(ConcurrentBench)
+    # pgo.cmake puts the compiler directory on PATH for the training process
+    # (needed for pgort140.dll on MSVC and the MSYS2 runtime DLLs on Clang)
     pgo_add_training_target(
     NAME concurrent-bench
     EXECUTABLE ConcurrentBench
     COMMAND
-        --benchmark_filter=.*
+        --benchmark_filter=${PGO_TRAINING_FILTER}
         --benchmark_repetitions=3
         --benchmark_min_time=0.01s
     REPEAT 1
@@ -193,7 +239,7 @@ if(BUILD_TESTING)
         ${CMAKE_CURRENT_SOURCE_DIR}/include
     )
     target_link_libraries(ConcurrentTests PRIVATE
-        gtest_main
+        GTest::gtest_main
         absl::synchronization
         Threads::Threads
     )

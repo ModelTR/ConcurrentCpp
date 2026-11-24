@@ -16,3 +16,6 @@ subprojects/.wraplock
 subprojects/abseil-cpp*/
 subprojects/benchmark*/
 subprojects/googletest*/
+
+.mypy_cache
+.ruff_cache

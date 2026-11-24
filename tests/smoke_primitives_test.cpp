@@ -30,9 +30,16 @@ TEST(COMMON_SMOKE, PACK_ROUND_TRIPS_INDEX_AND_TAG) {
 }
 
 TEST(ATOMIC_TAGGED_PTR_SMOKE, STORE_AND_SNAPSHOT) {
-	concur::details::AtomicTaggedPtr<Node, 16> ptr{nullptr, 0};
+	using TaggedPtr = concur::details::AtomicTaggedPtr<Node, 16>;
+	TaggedPtr ptr{nullptr, 0};
 	Node a;
 	Node b;
+
+	if (!TaggedPtr::pointer_has_free_tag_bits(&a) ||
+		!TaggedPtr::pointer_has_free_tag_bits(&b)) {
+		GTEST_SKIP() << "the selected addresses do not provide 16 free high "
+						"tag bits (32-bit address space)";
+	}
 
 	EXPECT_EQ(ptr.get(), nullptr);
 	EXPECT_EQ(ptr.get_tag(), uintptr{0});
@@ -51,9 +58,17 @@ TEST(ATOMIC_TAGGED_PTR_SMOKE, STORE_AND_SNAPSHOT) {
 }
 
 TEST(ATOMIC_TAGGED_PTR_SMOKE, COMPARE_EXCHANGE_UPDATES_POINTER_AND_TAG) {
-	concur::details::AtomicTaggedPtr<Node, 16> ptr{nullptr, 0};
+	using TaggedPtr = concur::details::AtomicTaggedPtr<Node, 16>;
+	TaggedPtr ptr{nullptr, 0};
 	Node a;
 	Node b;
+
+	if (!TaggedPtr::pointer_has_free_tag_bits(&a) ||
+		!TaggedPtr::pointer_has_free_tag_bits(&b)) {
+		GTEST_SKIP() << "the selected addresses do not provide 16 free high "
+						"tag bits (32-bit address space)";
+	}
+
 	ptr.store(&a, 7);
 
 	Node *expected_ptr = &a;

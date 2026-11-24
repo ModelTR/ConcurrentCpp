@@ -2,10 +2,18 @@
  pgo.cmake -- production-ready PGO (Profile-Guided Optimization) + LTO
              integration module
 ----------------------------------------------------------------------------
- Toolchains covered (measured in this workspace):
-   MSYS2 UCRT64 + clang 22.1.8 (x86_64-w64-windows-gnu) + libstdc++ + ninja
-   llvm-profdata / libclang_rt.profile live in the clang64 prefix
-   (ucrt64 does not provide them)
+ Project scope: Windows-first.  Supported toolchains:
+   MSYS2 UCRT64 clang++  (GNU target + libstdc++) + Ninja
+   MSYS2 UCRT64 g++      (GCC PGO: -fprofile-generate/-fprofile-use) + Ninja
+   MSYS2 clang64/mingw64 clang++ (tool locations are discovered, not assumed)
+   Standalone LLVM (clang++ + llvm-profdata + ld.lld in the same bin directory)
+   MSVC cl (VS 2019+) + Ninja: /GL + /LTCG, with the linker-side
+   /GENPROFILE and /USEPROFILE switches.
+   Not supported: clang-cl (no MSVC-target profile runtime in this toolchain).
+
+ Tool discovery is path-agnostic: hints are derived from the compiler location,
+ MSYSTEM_PREFIX / MINGW_PREFIX, CMAKE_PREFIX_PATH and PATH.  Override with
+ PGO_LLVM_BIN_DIR, PGO_PROFDATA_TOOL or PGO_LLD when the tools live elsewhere.
 
  Usage (out of the box, recommended):
 
@@ -15,7 +23,7 @@
    #
    # Then build like any other project (a single build command produces the
    # optimized binaries):
-   cmake -S proj -B build -G Ninja -DCMAKE_CXX_COMPILER=C:/msys64/ucrt64/bin/clang++.exe
+   cmake -S proj -B build -G Ninja -DCMAKE_CXX_COMPILER=<msys2>/ucrt64/bin/clang++.exe
    cmake --build build
    #
    # The first AUTO configure runs an instrumented build in <build>/pgo-bootstrap,
@@ -27,7 +35,7 @@
 
    # 1) Instrumented build + training + profile merge
    cmake -S proj -B build-inst -G Ninja \
-         -DCMAKE_CXX_COMPILER=C:/msys64/ucrt64/bin/clang++.exe \
+         -DCMAKE_CXX_COMPILER=<msys2>/ucrt64/bin/clang++.exe \
          -DPGO_MODE=GENERATE -DPGO_LTO=THIN \
          -DPGO_PROFILE_DIR=<absolute path>/profile
    cmake --build build-inst                     # build the instrumented program
@@ -35,7 +43,7 @@
 
    # 2) Build the optimized version with the profile
    cmake -S proj -B build-opt -G Ninja \
-         -DCMAKE_CXX_COMPILER=C:/msys64/ucrt64/bin/clang++.exe \
+         -DCMAKE_CXX_COMPILER=<msys2>/ucrt64/bin/clang++.exe \
          -DPGO_MODE=USE -DPGO_LTO=THIN \
          -DPGO_PROFILE_DIR=<absolute path>/profile
    cmake --build build-opt
@@ -45,13 +53,22 @@
    PGO_MODE          OFF | AUTO | GENERATE | USE   default OFF
                      AUTO = configure-time bootstrap + USE in this build (out of the box)
    PGO_KIND          IR | FE                      default IR (clang: IRPGO is better than FEPGO)
+                     MSVC: ignored (native /GENPROFILE flow, reported as MSVC)
+                     GCC: reported as GNU (no IR/FE split)
    PGO_LTO           OFF | THIN | FULL            default OFF
+                     MSVC/GCC: THIN is treated as FULL (no thin LTO)
    PGO_SCOPE         GLOBAL | TARGET              default GLOBAL
    PGO_PROFILE_DIR   profile data directory       default ${CMAKE_BINARY_DIR}/pgo-profile
    PGO_PROFDATA      merged profile file          default ${PGO_PROFILE_DIR}/profile.profdata
-   PGO_PROFDATA_TOOL llvm-profdata executable     default auto-detected
-   PGO_RESOURCE_DIR  clang resource-dir           default auto-detected (ucrt64 must point at clang64)
-   PGO_LINKER        linker for the PGO/LTO stage default lld (GNU ld cannot be used for PGO/LTO, see the report)
+                     MSVC: ignored, each training executable uses
+                     ${PGO_PROFILE_DIR}/<target>.pgd
+                     GCC: ignored, uses the .gcda files under PGO_PROFILE_DIR
+   PGO_PROFDATA_TOOL llvm-profdata executable     auto-detected (clang only)
+   PGO_RESOURCE_DIR  clang resource-dir           auto-detected (clang only)
+   PGO_LLVM_BIN_DIR  directory with llvm-* tools  default empty (derived from the compiler)
+   PGO_LLD           path to ld.lld                auto-detected (clang; required on Windows)
+   PGO_LINKER        linker for the PGO/LTO stage Windows: lld; elsewhere: compiler default
+   PGO_GCC_PREFIX_PATH  GCC -fprofile-prefix-path default ${CMAKE_BINARY_DIR} (GCC only)
    PGO_STRICT        fail when the profile is missing in USE mode  default ON
    PGO_KEEP_WARNINGS keep -Wprofile-instr-unprofiled / -Wbackend-plugin  default OFF
    PGO_WERROR_OUT_OF_DATE  fail when the profile and the code disagree  default OFF
@@ -79,8 +96,8 @@
 
  Targets provided:
    pgo-train   run every training program registered with pgo_add_training_target() and merge the profile
-   pgo-merge   merge only the profraw files under ${PGO_PROFILE_DIR} -> ${PGO_PROFDATA}
-   pgo-check   verify that llvm-profdata can read ${PGO_PROFDATA} and print a summary
+   pgo-merge   clang: merge profraw -> profdata; MSVC: check .pgd/.pgc; GCC: validate .gcda
+   pgo-check   print a profile summary for the active toolchain
    pgo-clean   delete profraw / profdata (for retraining, avoids stale data)
 
  Functions provided:
@@ -199,14 +216,19 @@ foreach(_v PGO_AUTO_REBOOTSTRAP PGO_FORWARD_CACHE)
   endif()
 endforeach()
 
-if(NOT PGO_LINKER)
-  set(PGO_LINKER lld)
-endif()
+# Optional toolchain hints (all empty by default: the module discovers them).
+foreach(_v PGO_LINKER PGO_LLVM_BIN_DIR PGO_LLD PGO_PROFDATA_TOOL PGO_GCC_PREFIX_PATH)
+  if(NOT DEFINED ${_v})
+    set(${_v} "")
+  endif()
+endforeach()
 
 # Fail fast on invalid values (catch them at configure time, not halfway
 # through a build).
 set(_pgo_valid_modes OFF AUTO GENERATE USE)
-set(_pgo_valid_kinds IR FE)
+# MSVC and GNU are internal values assigned after compiler detection; accept
+# them as well so an AUTO sub-build can forward the already-normalized kind.
+set(_pgo_valid_kinds IR FE MSVC GNU)
 set(_pgo_valid_ltos OFF THIN FULL)
 set(_pgo_valid_scopes GLOBAL TARGET)
 if(NOT PGO_MODE IN_LIST _pgo_valid_modes)
@@ -286,65 +308,158 @@ endif()
 # ----------------------------------------------------------------------------
 set(_pgo_is_clang FALSE)
 set(_pgo_is_gnu FALSE)
+set(_pgo_is_msvc FALSE)
 if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+  if(CMAKE_CXX_SIMULATE_ID STREQUAL "MSVC")
+    message(FATAL_ERROR
+      "[pgo] clang-cl is not supported: the clang-cl driver in this toolchain "
+      "has no MSVC-target profile runtime (link fails with LNK1181: cannot "
+      "open 'clang_rt.profile.lib').\n"
+      "      Use GNU clang (clang++ with libstdc++) or MSVC cl instead.")
+  endif()
   set(_pgo_is_clang TRUE)
 elseif(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
   set(_pgo_is_gnu TRUE)
+elseif(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+  set(_pgo_is_msvc TRUE)
 else()
   message(FATAL_ERROR
     "[pgo] unsupported compiler '${CMAKE_CXX_COMPILER_ID}' "
-    "(this module supports Clang and GNU; the MSVC /GL /GENPROFILE "
-    "/USEPROFILE flow has not been tested, do not use it)")
+    "(this module supports Clang, GNU and MSVC)")
 endif()
 
-if(_pgo_is_gnu AND PGO_KIND STREQUAL "IR")
+if(_pgo_is_clang AND (PGO_KIND STREQUAL "MSVC" OR PGO_KIND STREQUAL "GNU"))
+  message(FATAL_ERROR
+    "[pgo] PGO_KIND='${PGO_KIND}' is an internal value and does not match clang; "
+    "use IR or FE")
+endif()
+
+if(_pgo_is_gnu)
   # GCC has no IRPGO/FEPGO distinction.
   set(PGO_KIND GNU)
 endif()
 
+if(_pgo_is_msvc)
+  # MSVC has a single profile format; /GENPROFILE and /USEPROFILE are
+  # linker-side switches (measured with VS 2026 / link 14.52: cl itself
+  # rejects /GENPROFILE with D9002, while link.exe accepts it).
+  if(PGO_KIND STREQUAL "FE")
+    message(STATUS "[pgo] MSVC has no FEPGO/IRPGO split; PGO_KIND=FE is ignored")
+  endif()
+  set(PGO_KIND MSVC)
+  if(PGO_LTO STREQUAL "THIN")
+    message(STATUS "[pgo] MSVC has no thin LTO; PGO_LTO=THIN is treated as FULL (/LTCG)")
+    set(PGO_LTO FULL)
+  endif()
+endif()
+
+# ----------------------------------------------------------------------------
+# 2.0 Resolve the compiler location and build a portable list of tool hints.
+#     CMAKE_CXX_COMPILER is normally absolute, but users may pass a bare
+#     program name (g++, clang++, cl).  Never assume a fixed MSYS2 root:
+#     derive candidates from the compiler, the active MSYS2 prefix
+#     (MSYSTEM_PREFIX / MINGW_PREFIX), CMAKE_PREFIX_PATH and PATH.
+# ----------------------------------------------------------------------------
+set(_pgo_cxx_path "${CMAKE_CXX_COMPILER}")
+if(NOT IS_ABSOLUTE "${_pgo_cxx_path}")
+  find_program(_pgo_cxx_resolved NAMES "${CMAKE_CXX_COMPILER}")
+  if(_pgo_cxx_resolved)
+    set(_pgo_cxx_path "${_pgo_cxx_resolved}")
+  endif()
+endif()
+get_filename_component(_pgo_cxx_bin "${_pgo_cxx_path}" DIRECTORY)
+get_filename_component(_pgo_cxx_prefix "${_pgo_cxx_bin}" DIRECTORY)
+get_filename_component(_pgo_msys_root "${_pgo_cxx_prefix}" DIRECTORY)
+
+set(_pgo_tool_dirs "")
+foreach(_pgo_dir IN ITEMS
+    "${PGO_LLVM_BIN_DIR}"
+    "${_pgo_cxx_bin}"
+    "$ENV{MSYSTEM_PREFIX}/bin"
+    "$ENV{MINGW_PREFIX}/bin")
+  if(_pgo_dir AND NOT "${_pgo_dir}" STREQUAL "/bin")
+    list(APPEND _pgo_tool_dirs "${_pgo_dir}")
+  endif()
+endforeach()
+if(_pgo_msys_root)
+  foreach(_pgo_prefix IN ITEMS ucrt64 clang64 mingw64)
+    list(APPEND _pgo_tool_dirs "${_pgo_msys_root}/${_pgo_prefix}/bin")
+  endforeach()
+endif()
+foreach(_pgo_prefix_path IN LISTS CMAKE_PREFIX_PATH)
+  if(_pgo_prefix_path)
+    list(APPEND _pgo_tool_dirs "${_pgo_prefix_path}/bin")
+  endif()
+endforeach()
+list(REMOVE_DUPLICATES _pgo_tool_dirs)
+
+# find_program() wrapper: searches the portable hints first, then PATH.
+function(_pgo_find_tool out)
+  unset(${out} CACHE)
+  unset(${out})
+  find_program(${out} NAMES ${ARGN} HINTS ${_pgo_tool_dirs})
+  if(${out})
+    file(TO_CMAKE_PATH "${${out}}" _pgo_tool_path)
+    set(${out} "${_pgo_tool_path}" CACHE FILEPATH "" FORCE)
+    set(${out} "${_pgo_tool_path}" PARENT_SCOPE)
+  else()
+    set(${out} "" PARENT_SCOPE)
+  endif()
+endfunction()
+
+# GCC profile paths: GCC >= 9 can strip the build-directory prefix from the
+# .gcda names, which makes a profile reusable across build directories and
+# enables AUTO.  The prefix must use the platform's native separators.
+if(_pgo_is_gnu)
+  if(NOT PGO_GCC_PREFIX_PATH AND NOT "${CMAKE_BINARY_DIR}" STREQUAL "")
+    set(PGO_GCC_PREFIX_PATH "${CMAKE_BINARY_DIR}")
+  endif()
+  if(PGO_GCC_PREFIX_PATH)
+    get_filename_component(PGO_GCC_PREFIX_PATH "${PGO_GCC_PREFIX_PATH}" ABSOLUTE)
+    file(TO_NATIVE_PATH "${PGO_GCC_PREFIX_PATH}" _pgo_gcc_prefix_native)
+  else()
+    set(_pgo_gcc_prefix_native "")
+  endif()
+  if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 9)
+    message(STATUS
+      "[pgo] GCC ${CMAKE_CXX_COMPILER_VERSION} does not support "
+      "-fprofile-prefix-path; GCC profile reuse requires the same build directory")
+  endif()
+endif()
+
 # ----------------------------------------------------------------------------
 # 2.1 LLVM archiver/ranlib must match the compiler when LTO produces bitcode.
-#     CMake may auto-pick C:/Program Files/LLVM/bin/llvm-ar (e.g. LLVM 22)
-#     while clang++ is LLVM 23.  llvm-ar then rejects LLVM 23 bitcode objects:
-#       'benchmark.cc.obj': Not an int attribute
-#       (Producer: 'LLVM23.1.5' Reader: 'LLVM 22.1.0')
-#     Prefer the compiler's own bin directory, then sibling MSYS2 prefixes.
+#     CMake may auto-pick a different LLVM installation's llvm-ar; prefer the
+#     compiler's own llvm-ar/llvm-ranlib when available.
 # ----------------------------------------------------------------------------
 if(_pgo_is_clang AND (PGO_GENERATE OR PGO_USE OR NOT PGO_LTO STREQUAL "OFF"))
-  get_filename_component(_pgo_cxx_bin "${CMAKE_CXX_COMPILER}" DIRECTORY)
-  get_filename_component(_pgo_cxx_prefix "${_pgo_cxx_bin}" DIRECTORY)
-  get_filename_component(_pgo_msys_root "${_pgo_cxx_prefix}" DIRECTORY)
-  if(WIN32)
-    set(_pgo_tool_suffix ".exe")
-  else()
-    set(_pgo_tool_suffix "${CMAKE_EXECUTABLE_SUFFIX}")
+  _pgo_find_tool(_pgo_llvm_ar "llvm-ar" "llvm-ar.exe")
+  _pgo_find_tool(_pgo_llvm_ranlib "llvm-ranlib" "llvm-ranlib.exe")
+  if(_pgo_llvm_ar)
+    set(CMAKE_AR "${_pgo_llvm_ar}" CACHE FILEPATH
+        "LLVM archiver matching the compiler for PGO/LTO" FORCE)
+    set(CMAKE_AR "${_pgo_llvm_ar}")
   endif()
-  set(_pgo_tool_dirs
-      "${_pgo_cxx_bin}"
-      "${_pgo_msys_root}/clang64/bin"
-      "${_pgo_msys_root}/ucrt64/bin"
-      "${_pgo_msys_root}/mingw64/bin")
-  foreach(_pgo_tool IN ITEMS llvm-ar llvm-ranlib)
-    set(_pgo_tool_path "")
-    foreach(_pgo_dir ${_pgo_tool_dirs})
-      if(EXISTS "${_pgo_dir}/${_pgo_tool}${_pgo_tool_suffix}")
-        set(_pgo_tool_path "${_pgo_dir}/${_pgo_tool}${_pgo_tool_suffix}")
-        break()
-      endif()
-    endforeach()
-    if(_pgo_tool STREQUAL "llvm-ar" AND _pgo_tool_path)
-      set(CMAKE_AR "${_pgo_tool_path}" CACHE FILEPATH
-          "LLVM archiver matching the compiler for PGO/LTO" FORCE)
-      set(CMAKE_AR "${_pgo_tool_path}")
-    elseif(_pgo_tool STREQUAL "llvm-ranlib" AND _pgo_tool_path)
-      set(CMAKE_RANLIB "${_pgo_tool_path}" CACHE FILEPATH
-          "LLVM ranlib matching the compiler for PGO/LTO" FORCE)
-      set(CMAKE_RANLIB "${_pgo_tool_path}")
-    endif()
-  endforeach()
+  if(_pgo_llvm_ranlib)
+    set(CMAKE_RANLIB "${_pgo_llvm_ranlib}" CACHE FILEPATH
+        "LLVM ranlib matching the compiler for PGO/LTO" FORCE)
+    set(CMAKE_RANLIB "${_pgo_llvm_ranlib}")
+  endif()
   if(PGO_VERBOSE)
     message(STATUS "[pgo] archiver = ${CMAKE_AR}")
     message(STATUS "[pgo] ranlib   = ${CMAKE_RANLIB}")
+  endif()
+endif()
+
+# lld detection: required on Windows/clang for PGO instrumentation and LTO;
+# elsewhere the compiler's default linker is usually fine.
+set(_pgo_lld "")
+if(_pgo_is_clang)
+  if(PGO_LLD)
+    set(_pgo_lld "${PGO_LLD}")
+    file(TO_CMAKE_PATH "${_pgo_lld}" _pgo_lld)
+  else()
+    _pgo_find_tool(_pgo_lld "ld.lld" "ld.lld.exe")
   endif()
 endif()
 
@@ -358,11 +473,43 @@ if(CMAKE_BUILD_TYPE)
     set(_pgo_cur_flags "${_pgo_cur_flags} ${CMAKE_CXX_FLAGS_${_pgo_bt}}")
   endif()
 endif()
-if(NOT _pgo_cur_flags MATCHES "(^| )-O([1-3s]|fast)")
+if(_pgo_is_msvc)
+  if(NOT _pgo_cur_flags MATCHES "(^| )[/-](O1|O2|Ox)")
+    message(WARNING
+      "[pgo] no /O1, /O2 or /Ox found in the compile flags for "
+      "CMAKE_BUILD_TYPE='${CMAKE_BUILD_TYPE}' (current: '${_pgo_cur_flags}'); "
+      "PGO/LTO will not help. Consider -DCMAKE_BUILD_TYPE=Release.")
+  endif()
+elseif(NOT _pgo_cur_flags MATCHES "(^| )-O([1-3s]|fast)")
   message(WARNING
     "[pgo] no -O1/-O2/-O3 found in the compile flags for "
     "CMAKE_BUILD_TYPE='${CMAKE_BUILD_TYPE}' (current: '${_pgo_cur_flags}'); "
     "PGO/LTO will not help. Consider -DCMAKE_BUILD_TYPE=Release.")
+endif()
+
+# ----------------------------------------------------------------------------
+# 2.2 MSVC: locate pgomgr (used by pgo-check for a profile summary).
+#     The actual .pgc -> .pgd merge is done by link.exe automatically when
+#     /USEPROFILE:PGD=<file> is used, so no external merge step is required.
+# ----------------------------------------------------------------------------
+set(_pgo_msvc_bin_dir "")
+if(_pgo_is_msvc)
+  get_filename_component(_pgo_msvc_bin_dir "${CMAKE_CXX_COMPILER}" DIRECTORY)
+  # Clear a previous cache entry; find_program() skips the search when the
+  # variable is already defined to a non-NOTFOUND value (including "").
+  unset(_pgo_pgomgr CACHE)
+  unset(_pgo_pgomgr)
+  if(_pgo_msvc_bin_dir)
+    find_program(_pgo_pgomgr NAMES pgomgr pgomgr.exe HINTS "${_pgo_msvc_bin_dir}")
+  endif()
+  if(NOT _pgo_pgomgr)
+    find_program(_pgo_pgomgr NAMES pgomgr pgomgr.exe)
+  endif()
+  if(_pgo_pgomgr)
+    file(TO_CMAKE_PATH "${_pgo_pgomgr}" _pgo_pgomgr)
+  else()
+    set(_pgo_pgomgr "")
+  endif()
 endif()
 
 # ----------------------------------------------------------------------------
@@ -398,19 +545,24 @@ if(_pgo_is_clang)
       set(_pgo_resource_dir_reason "the compiler's own resource-dir already contains the profile runtime")
     else()
       # Fallback: look for a same-version resource-dir under sibling prefixes
-      #   C:/msys64/ucrt64/bin/clang++ -> prefix C:/msys64/ucrt64 -> parent C:/msys64
+      #   <msys2>/ucrt64/bin/clang++ -> prefix <msys2>/ucrt64 -> parent <msys2>
       get_filename_component(_pgo_bin_dir "${CMAKE_CXX_COMPILER}" DIRECTORY)
       get_filename_component(_pgo_prefix "${_pgo_bin_dir}" DIRECTORY)
       get_filename_component(_pgo_root "${_pgo_prefix}" DIRECTORY)
       set(_pgo_candidates "")
       if(_pgo_ver)
         file(GLOB _pgo_candidates
-          "${_pgo_root}/*/lib/clang/${_pgo_ver}/lib/windows/libclang_rt.profile-*.a")
+          "${_pgo_root}/*/lib/clang/${_pgo_ver}/lib/windows/libclang_rt.profile-*.a"
+          "${_pgo_root}/*/lib/clang/${_pgo_ver}/lib/*/libclang_rt.profile*.a"
+          "${_pgo_root}/*/lib/clang/${_pgo_ver}/lib/libclang_rt.profile*.a")
       endif()
       if(_pgo_candidates)
         list(GET _pgo_candidates 0 _pgo_hit)
         # .../<prefix>/lib/clang/<ver>/lib/windows/libclang_rt.profile-x86_64.a -> back to clang/<ver>
         string(REGEX REPLACE "/lib/(windows|[^/]+)/libclang_rt\\.profile[^/]*$" "" _pgo_cand_rd "${_pgo_hit}")
+        if(NOT _pgo_cand_rd OR NOT EXISTS "${_pgo_cand_rd}/lib")
+          string(REGEX REPLACE "/lib/libclang_rt\\.profile[^/]*$" "" _pgo_cand_rd "${_pgo_hit}")
+        endif()
         set(_pgo_resource_dir "${_pgo_cand_rd}")
         set(_pgo_resource_dir_reason "the compiler resource-dir lacks the profile runtime; using ${_pgo_cand_rd}")
       else()
@@ -419,7 +571,7 @@ if(_pgo_is_clang)
           "or its sibling prefixes (${_pgo_root}/*/lib/clang/${_pgo_ver}).\n"
           "      PGO needs the compiler runtime library libclang_rt.profile; "
           "install a prefix that contains compiler-rt (clang64 on MSYS2), or pass "
-          "-DPGO_RESOURCE_DIR=<resource-dir containing lib/windows/libclang_rt.profile-*.a>.")
+          "-DPGO_RESOURCE_DIR=<resource-dir containing lib/*/libclang_rt.profile-*.a>.")
       endif()
     endif()
   endif()
@@ -435,54 +587,21 @@ if(_pgo_is_clang)
   endif()
 endif()
 
-# llvm-profdata (not needed for GCC)
+# llvm-profdata (clang only; GCC and MSVC do not use it)
 set(_pgo_profdata_tool "")
 if(_pgo_is_clang)
-  if(DEFINED PGO_PROFDATA_TOOL AND NOT PGO_PROFDATA_TOOL STREQUAL "")
+  if(PGO_PROFDATA_TOOL)
     set(_pgo_profdata_tool "${PGO_PROFDATA_TOOL}")
+    file(TO_CMAKE_PATH "${_pgo_profdata_tool}" _pgo_profdata_tool)
   else()
-    get_filename_component(_pgo_bin_dir "${CMAKE_CXX_COMPILER}" DIRECTORY)
-    foreach(_cand
-        "${_pgo_bin_dir}/llvm-profdata${CMAKE_EXECUTABLE_SUFFIX}"
-        "${_pgo_bin_dir}/../bin/llvm-profdata${CMAKE_EXECUTABLE_SUFFIX}")
-      if(EXISTS "${_cand}")
-        set(_pgo_profdata_tool "${_cand}")
-        break()
-      endif()
-    endforeach()
-    if(NOT _pgo_profdata_tool)
-      # MSYS2 commonly uses a ucrt64 compiler while llvm-profdata lives in
-      # clang64.  The compiler's own prefix and its sibling prefixes must be
-      # searched; relying only on PATH fails in that setup.
-      get_filename_component(_pgo_prof_bin_dir "${CMAKE_CXX_COMPILER}" DIRECTORY)
-      get_filename_component(_pgo_prof_prefix "${_pgo_prof_bin_dir}" DIRECTORY)
-      get_filename_component(_pgo_prof_root "${_pgo_prof_prefix}" DIRECTORY)
-      file(GLOB _pgo_profdata_candidates
-        "${_pgo_prof_root}/*/bin/llvm-profdata${CMAKE_EXECUTABLE_SUFFIX}")
-      if(_pgo_profdata_candidates)
-        list(GET _pgo_profdata_candidates 0 _pgo_profdata_tool)
-      endif()
-    endif()
-    if(NOT _pgo_profdata_tool AND _pgo_ver)
-      # The prefix that owns the resource-dir (clang64) usually provides
-      # llvm-profdata too.
-      get_filename_component(_pgo_rd_prefix "${_pgo_resource_dir}/../../.." ABSOLUTE)
-      if(EXISTS "${_pgo_rd_prefix}/bin/llvm-profdata${CMAKE_EXECUTABLE_SUFFIX}")
-        set(_pgo_profdata_tool "${_pgo_rd_prefix}/bin/llvm-profdata${CMAKE_EXECUTABLE_SUFFIX}")
-      endif()
-    endif()
-    if(NOT _pgo_profdata_tool)
-      find_program(_pgo_profdata_tool NAMES llvm-profdata llvm-profdata.exe)
-    endif()
+    _pgo_find_tool(_pgo_profdata_tool "llvm-profdata" "llvm-profdata.exe")
   endif()
   if(NOT _pgo_profdata_tool)
     message(FATAL_ERROR
-      "[pgo] cannot find llvm-profdata (required to merge PGO profiles). "
-      "Pass -DPGO_PROFDATA_TOOL=<path> explicitly.\n"
-      "      On this machine (MSYS2) it is usually at "
-      "C:/msys64/clang64/bin/llvm-profdata.exe.")
+      "[pgo] cannot find llvm-profdata (required to merge PGO profiles).\n"
+      "      Pass -DPGO_PROFDATA_TOOL=<path> or -DPGO_LLVM_BIN_DIR=<dir>, "
+      "or put llvm-profdata on PATH.")
   endif()
-  file(TO_CMAKE_PATH "${_pgo_profdata_tool}" _pgo_profdata_tool)
 endif()
 
 # ----------------------------------------------------------------------------
@@ -491,18 +610,32 @@ endif()
 #     then compiles this build with USE.
 #     User perspective: cmake -S . -B build && cmake --build build yields the
 #     optimized binaries.
-#     Restriction: clang + a single-config generator (GCC's .gcda files are tied
-#     to the build directory, so a separate bootstrap directory cannot work).
+#     Restriction: single-config generator.  GCC >= 9 uses
+#     -fprofile-prefix-path, so a bootstrap sub-directory works; older GCC
+#     requires the manual same-directory two-stage flow.
 # ----------------------------------------------------------------------------
 if(PGO_AUTO)
-  if(NOT _pgo_is_clang)
+  if(NOT _pgo_is_clang AND NOT _pgo_is_msvc AND NOT _pgo_is_gnu)
     message(FATAL_ERROR
-      "[pgo] PGO_MODE=AUTO only supports clang: GCC encodes the object file's "
-      "build directory in the .gcda name,\n"
-      "      so bootstrapping from a separate directory is impossible. "
-      "For GCC use the manual three-stage flow (same build directory):\n"
+      "[pgo] PGO_MODE=AUTO supports clang, MSVC and GCC (>= 9) only")
+  endif()
+  if(_pgo_is_gnu AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 9)
+    message(FATAL_ERROR
+      "[pgo] PGO_MODE=AUTO with GCC requires GCC >= 9 "
+      "(-fprofile-prefix-path).\n"
+      "      For older GCC use the manual two-stage flow in the same build directory:\n"
       "        cmake -B build -DPGO_MODE=GENERATE && cmake --build build --target pgo-train\n"
       "        cmake -B build -DPGO_MODE=USE      && cmake --build build")
+  endif()
+  if(_pgo_is_gnu)
+    # AUTO owns the GCC prefix: the bootstrap sub-build strips its own
+    # directory, and this build strips CMAKE_BINARY_DIR, so both produce
+    # the same relative .gcda names.  A user value would break that match.
+    if(PGO_GCC_PREFIX_PATH AND NOT PGO_GCC_PREFIX_PATH STREQUAL CMAKE_BINARY_DIR)
+      message(STATUS "[pgo] AUTO: overriding PGO_GCC_PREFIX_PATH with CMAKE_BINARY_DIR for the GCC profile match")
+    endif()
+    set(PGO_GCC_PREFIX_PATH "${CMAKE_BINARY_DIR}")
+    file(TO_NATIVE_PATH "${PGO_GCC_PREFIX_PATH}" _pgo_gcc_prefix_native)
   endif()
   if(CMAKE_CONFIGURATION_TYPES)
     message(FATAL_ERROR "[pgo] PGO_MODE=AUTO requires a single-config generator (Ninja / Makefiles)")
@@ -519,6 +652,23 @@ if(PGO_AUTO)
   if(PGO_REBOOTSTRAP)
     set(_pgo_need_boot TRUE)
     set(_pgo_boot_why "PGO_REBOOTSTRAP=ON")
+  elseif(_pgo_is_msvc AND NOT EXISTS "${PGO_PROFILE_DIR}")
+    set(_pgo_need_boot TRUE)
+    set(_pgo_boot_why "the profile directory does not exist yet")
+  elseif(_pgo_is_msvc)
+    # MSVC keeps one .pgd per training executable; any existing .pgd means
+    # the profile can be reused.
+    file(GLOB _pgo_auto_pgds "${PGO_PROFILE_DIR}/*.pgd")
+    if(NOT _pgo_auto_pgds)
+      set(_pgo_need_boot TRUE)
+      set(_pgo_boot_why "no .pgd profile exists yet")
+    endif()
+  elseif(_pgo_is_gnu)
+    file(GLOB_RECURSE _pgo_auto_gcdas "${PGO_PROFILE_DIR}/*.gcda")
+    if(NOT _pgo_auto_gcdas)
+      set(_pgo_need_boot TRUE)
+      set(_pgo_boot_why "no .gcda profile exists yet")
+    endif()
   elseif(NOT EXISTS "${PGO_PROFDATA}")
     set(_pgo_need_boot TRUE)
     set(_pgo_boot_why "the profile does not exist yet")
@@ -548,7 +698,25 @@ if(PGO_AUTO)
       list(APPEND _pgo_srcs_kept "${_f}")
     endforeach()
     set(_pgo_srcs "${_pgo_srcs_kept}")
-    file(TIMESTAMP "${PGO_PROFDATA}" _pgo_pd_ts "%Y%m%d%H%M%S" UTC)
+    if(_pgo_is_msvc)
+      set(_pgo_pd_ts "00000000000000")
+      foreach(_pgd ${_pgo_auto_pgds})
+        file(TIMESTAMP "${_pgd}" _pgo_pgd_ts "%Y%m%d%H%M%S" UTC)
+        if(_pgo_pgd_ts GREATER _pgo_pd_ts)
+          set(_pgo_pd_ts "${_pgo_pgd_ts}")
+        endif()
+      endforeach()
+    elseif(_pgo_is_gnu)
+      set(_pgo_pd_ts "00000000000000")
+      foreach(_gcda ${_pgo_auto_gcdas})
+        file(TIMESTAMP "${_gcda}" _pgo_gcda_ts "%Y%m%d%H%M%S" UTC)
+        if(_pgo_gcda_ts GREATER _pgo_pd_ts)
+          set(_pgo_pd_ts "${_pgo_gcda_ts}")
+        endif()
+      endforeach()
+    else()
+      file(TIMESTAMP "${PGO_PROFDATA}" _pgo_pd_ts "%Y%m%d%H%M%S" UTC)
+    endif()
     foreach(_s ${_pgo_srcs})
       file(TIMESTAMP "${_s}" _pgo_s_ts "%Y%m%d%H%M%S" UTC)
       if(_pgo_s_ts GREATER _pgo_pd_ts)
@@ -567,15 +735,22 @@ if(PGO_AUTO)
     message(STATUS "[pgo]   sub-build directory: ${PGO_BOOTSTRAP_DIR}")
     message(STATUS "[pgo]   steps: configure the instrumented build -> build + train + merge the profile (slow the first time)")
 
-    # Remove profraw files from the previous run (otherwise old and new data
+    # Remove profile data from the previous run (otherwise old and new data
     # mix).  Automatic cleanup happens only inside this build directory.
+    if(_pgo_is_msvc)
+      set(_pgo_profile_globs "${PGO_PROFILE_DIR}/*.pgd" "${PGO_PROFILE_DIR}/*.pgc")
+    elseif(_pgo_is_gnu)
+      set(_pgo_profile_globs "${PGO_PROFILE_DIR}/*.gcda")
+    else()
+      set(_pgo_profile_globs "${PGO_PROFILE_DIR}/*.profraw" "${PGO_PROFILE_DIR}/*/*.profraw")
+    endif()
     if(PGO_PROFILE_DIR MATCHES "^${CMAKE_BINARY_DIR}")
       file(REMOVE_RECURSE "${PGO_PROFILE_DIR}")
     else()
-      file(GLOB _pgo_old_raws "${PGO_PROFILE_DIR}/*.profraw" "${PGO_PROFILE_DIR}/*/*.profraw")
+      file(GLOB _pgo_old_raws ${_pgo_profile_globs})
       if(_pgo_old_raws)
         message(STATUS "[pgo]   note: PGO_PROFILE_DIR is outside the build "
-                       "directory; make sure old profraw files do not mix in "
+                       "directory; make sure old profile files do not mix in "
                        "(found ${_pgo_old_raws})")
       endif()
     endif()
@@ -615,10 +790,19 @@ if(PGO_AUTO)
       "-DPGO_SCOPE=${PGO_SCOPE}"
       "-DPGO_PROFILE_DIR=${PGO_PROFILE_DIR}"
       "-DPGO_PROFDATA=${PGO_PROFDATA}"
-      "-DPGO_RESOURCE_DIR=${_pgo_resource_dir}"
-      "-DPGO_PROFDATA_TOOL=${_pgo_profdata_tool}"
       "-DPGO_KEEP_WARNINGS=${PGO_KEEP_WARNINGS}"
       "-DPGO_VERBOSE=OFF")
+    if(_pgo_is_clang)
+      list(APPEND _pgo_boot_args
+        "-DPGO_RESOURCE_DIR=${_pgo_resource_dir}"
+        "-DPGO_PROFDATA_TOOL=${_pgo_profdata_tool}")
+    endif()
+    if(_pgo_is_gnu)
+      # GCC: strip the *bootstrap* build-directory prefix so the .gcda names
+      # match the main build directory at USE time.
+      file(TO_NATIVE_PATH "${PGO_BOOTSTRAP_DIR}" _pgo_boot_gcc_prefix)
+      list(APPEND _pgo_boot_args "-DPGO_GCC_PREFIX_PATH=${_pgo_boot_gcc_prefix}")
+    endif()
     if(CMAKE_GENERATOR)
       list(APPEND _pgo_boot_args -G "${CMAKE_GENERATOR}")
     endif()
@@ -661,17 +845,49 @@ if(PGO_AUTO)
         "[pgo] bootstrap build/training failed (rc=${_pgo_rc2}). Full log: ${_pgo_boot_build_log}\n"
         "------ tail of the output ------\n${_pgo_err2}")
     endif()
-    if(NOT EXISTS "${PGO_PROFDATA}")
-      message(FATAL_ERROR
-        "[pgo] the bootstrap ran but did not produce ${PGO_PROFDATA}.\n"
-        "      Make sure the project registers a training workload with "
-        "pgo_add_training_target() (training only happens when one is registered).")
+    if(_pgo_is_msvc)
+      file(GLOB _pgo_boot_pgds "${PGO_PROFILE_DIR}/*.pgd")
+      if(NOT _pgo_boot_pgds)
+        message(FATAL_ERROR
+          "[pgo] the bootstrap ran but produced no .pgd under ${PGO_PROFILE_DIR}.\n"
+          "      Make sure the project registers a training workload with "
+          "pgo_add_training_target() (training only happens when one is registered).")
+      endif()
+      list(LENGTH _pgo_boot_pgds _pgo_boot_npgd)
+      message(STATUS "[pgo] bootstrap complete: ${_pgo_boot_npgd} .pgd file(s) under ${PGO_PROFILE_DIR} -> this build compiles with USE")
+    elseif(_pgo_is_gnu)
+      file(GLOB_RECURSE _pgo_boot_gcdas "${PGO_PROFILE_DIR}/*.gcda")
+      list(LENGTH _pgo_boot_gcdas _pgo_boot_ngcda)
+      if(_pgo_boot_ngcda EQUAL 0)
+        message(FATAL_ERROR
+          "[pgo] the bootstrap ran but produced no .gcda under ${PGO_PROFILE_DIR}.\n"
+          "      Make sure the project registers a training workload with "
+          "pgo_add_training_target() (training only happens when one is registered).")
+      endif()
+      message(STATUS "[pgo] bootstrap complete: ${_pgo_boot_ngcda} .gcda file(s) under ${PGO_PROFILE_DIR} -> this build compiles with USE")
+    else()
+      if(NOT EXISTS "${PGO_PROFDATA}")
+        message(FATAL_ERROR
+          "[pgo] the bootstrap ran but did not produce ${PGO_PROFDATA}.\n"
+          "      Make sure the project registers a training workload with "
+          "pgo_add_training_target() (training only happens when one is registered).")
+      endif()
+      file(SIZE "${PGO_PROFDATA}" _pgo_pd_bytes)
+      math(EXPR _pgo_pd_kib "${_pgo_pd_bytes} / 1024")
+      message(STATUS "[pgo] bootstrap complete: ${PGO_PROFDATA} (${_pgo_pd_kib} KiB) -> this build compiles with USE")
     endif()
-    file(SIZE "${PGO_PROFDATA}" _pgo_pd_bytes)
-    math(EXPR _pgo_pd_kib "${_pgo_pd_bytes} / 1024")
-    message(STATUS "[pgo] bootstrap complete: ${PGO_PROFDATA} (${_pgo_pd_kib} KiB) -> this build compiles with USE")
   else()
-    message(STATUS "[pgo] AUTO: reusing the existing profile ${PGO_PROFDATA}")
+    if(_pgo_is_msvc)
+      file(GLOB _pgo_reuse_pgds "${PGO_PROFILE_DIR}/*.pgd")
+      list(LENGTH _pgo_reuse_pgds _pgo_reuse_n)
+      message(STATUS "[pgo] AUTO: reusing ${_pgo_reuse_n} existing .pgd file(s) under ${PGO_PROFILE_DIR}")
+    elseif(_pgo_is_gnu)
+      file(GLOB_RECURSE _pgo_reuse_gcdas "${PGO_PROFILE_DIR}/*.gcda")
+      list(LENGTH _pgo_reuse_gcdas _pgo_reuse_n)
+      message(STATUS "[pgo] AUTO: reusing ${_pgo_reuse_n} existing .gcda file(s) under ${PGO_PROFILE_DIR}")
+    else()
+      message(STATUS "[pgo] AUTO: reusing the existing profile ${PGO_PROFDATA}")
+    endif()
   endif()
 
   set(PGO_AUTO TRUE)
@@ -684,7 +900,26 @@ endif()
 # 4. USE mode: profile availability check (fails at configure time when strict)
 # ----------------------------------------------------------------------------
 if(PGO_USE)
-  if(_pgo_is_clang)
+  if(_pgo_is_msvc)
+    # One .pgd per training executable; link.exe merges <pgd>!*.pgc when
+    # /USEPROFILE:PGD=<pgd> is used.
+    file(GLOB _pgo_pgd_files "${PGO_PROFILE_DIR}/*.pgd")
+    if(NOT _pgo_pgd_files)
+      if(PGO_STRICT)
+        message(FATAL_ERROR
+          "[pgo] PGO_MODE=USE needs at least one .pgd under '${PGO_PROFILE_DIR}', "
+          "but none was found.\n"
+          "      Run the GENERATE stage first: cmake --build <build-inst> --target pgo-train\n"
+          "      (PGO_STRICT=OFF degrades to a normal build).")
+      else()
+        message(WARNING "[pgo] no .pgd under '${PGO_PROFILE_DIR}'; degrading to a normal build (PGO_STRICT=OFF)")
+        set(PGO_USE FALSE)
+        if(NOT PGO_LTO)
+          set(PGO_ACTIVE FALSE)
+        endif()
+      endif()
+    endif()
+  elseif(_pgo_is_clang)
     if(EXISTS "${PGO_PROFDATA}")
       file(SIZE "${PGO_PROFDATA}" _pgo_profdata_size)
       if(_pgo_profdata_size EQUAL 0)
@@ -711,19 +946,21 @@ if(PGO_USE)
       endif()
     endif()
   else()
-    # GCC: the profile consists of .gcda files; a directory is enough.
+    # GCC: the profile is a directory of .gcda files.  With GCC >= 9,
+    # -fprofile-prefix-path makes the .gcda names relative to
+    # PGO_GCC_PREFIX_PATH, so GENERATE and USE may run in different build
+    # directories (and AUTO can use a bootstrap sub-directory).
     if(NOT IS_DIRECTORY "${PGO_PROFILE_DIR}")
       if(PGO_STRICT)
         message(FATAL_ERROR "[pgo] GCC PGO_MODE=USE requires the directory '${PGO_PROFILE_DIR}' (containing .gcda files).")
       else()
         message(WARNING "[pgo] cannot find '${PGO_PROFILE_DIR}'; degrading to a normal build (PGO_STRICT=OFF)")
         set(PGO_USE FALSE)
+        if(NOT PGO_LTO)
+          set(PGO_ACTIVE FALSE)
+        endif()
       endif()
     else()
-      # GCC encodes the **directory of the object file** in the .gcda name
-      # (measured: <dir>/C~/Users/.../<build-dir>/CMakeFiles#<target>.dir#<src>.gcda),
-      # so GENERATE and USE must run in the same build directory (unlike clang,
-      # which only needs a single profdata file).
       file(GLOB_RECURSE _pgo_gcda_files "${PGO_PROFILE_DIR}/*.gcda")
       list(LENGTH _pgo_gcda_files _pgo_ngcda)
       if(_pgo_ngcda EQUAL 0)
@@ -733,60 +970,66 @@ if(PGO_USE)
         else()
           message(WARNING "[pgo] no .gcda files under '${PGO_PROFILE_DIR}'; degrading to a normal build")
           set(PGO_USE FALSE)
+          if(NOT PGO_LTO)
+            set(PGO_ACTIVE FALSE)
+          endif()
         endif()
       else()
-        set(_pgo_bdir_key "${CMAKE_BINARY_DIR}")
-        string(REPLACE ":" "~" _pgo_bdir_key "${_pgo_bdir_key}")
-        string(REPLACE "\\" "/" _pgo_bdir_key "${_pgo_bdir_key}")
-        set(_pgo_gcda_hit FALSE)
-        foreach(_f ${_pgo_gcda_files})
-          string(REPLACE "\\" "/" _ff "${_f}")
-          string(FIND "${_ff}" "${_pgo_bdir_key}" _pos)
-          if(NOT _pos EQUAL -1)
-            set(_pgo_gcda_hit TRUE)
-            break()
-          endif()
-        endforeach()
-        if(NOT _pgo_gcda_hit)
-          message(WARNING
-            "[pgo] GCC .gcda paths are tied to the object file locations: the current build directory '${CMAKE_BINARY_DIR}' has "
-            "no matching .gcda under '${PGO_PROFILE_DIR}', so the profile will not take effect "
-            "(the compiler will report -Wmissing-profile).\n"
-            "      For GCC **run both stages in the same build directory**: first GENERATE + pgo-train, then reconfigure with PGO_MODE=USE and rebuild.")
-        endif()
+        message(STATUS
+          "[pgo] GCC profile: ${_pgo_ngcda} .gcda file(s) under ${PGO_PROFILE_DIR} "
+          "(prefix=${_pgo_gcc_prefix_native})")
       endif()
     endif()
   endif()
 endif()
 
 # ----------------------------------------------------------------------------
-# 5. Linker: both PGO instrumentation and LTO require lld (GNU ld failed in testing; see REPORT.md)
+# 5. Linker selection.
+#    Windows/clang: PGO instrumentation and LTO require lld, because the GNU
+#    ld shipped with MinGW cannot consume LLVM profile/bitcode objects.
+#    Other platforms: the compiler's default linker is usually fine and is
+#    left untouched unless the user sets PGO_LINKER explicitly.
 # ----------------------------------------------------------------------------
 set(_pgo_need_lld FALSE)
-if(PGO_GENERATE OR NOT PGO_LTO STREQUAL "OFF")
+if(_pgo_is_clang AND (PGO_GENERATE OR NOT PGO_LTO STREQUAL "OFF"))
   set(_pgo_need_lld TRUE)
 endif()
 
 if(_pgo_need_lld AND _pgo_is_clang)
-  foreach(_lt EXE SHARED MODULE)
-    if(CMAKE_${_lt}_LINKER_FLAGS MATCHES "fuse-ld=")
-      if(NOT CMAKE_${_lt}_LINKER_FLAGS MATCHES "fuse-ld=(lld|${PGO_LINKER})")
-        if(NOT PGO_ALLOW_ANY_LINKER)
-          message(FATAL_ERROR
-            "[pgo] CMAKE_${_lt}_LINKER_FLAGS already contains a non-lld -fuse-ld.\n"
-            "      PGO instrumentation (__profc_/__profd_ COMDAT) and LTO (bitcode) "
-            "fail to link with GNU ld;"
-            " lld is required.\n"
-            "      If you really need another linker, set "
-            "-DPGO_ALLOW_ANY_LINKER=ON explicitly (at your own risk).")
-        else()
-          message(WARNING "[pgo] using a non-lld linker; PGO/LTO will probably fail to link (PGO_ALLOW_ANY_LINKER=ON)")
-        endif()
+  if(WIN32)
+    if(NOT PGO_LINKER)
+      if(_pgo_lld)
+        set(PGO_LINKER "${_pgo_lld}")
+      elseif(NOT PGO_ALLOW_ANY_LINKER)
+        message(FATAL_ERROR
+          "[pgo] lld was not found.  PGO instrumentation and LTO on Windows "
+          "need lld (GNU ld cannot link LLVM profile/bitcode objects).\n"
+          "      Install lld (MSYS2: pacman -S mingw-w64-ucrt-x86_64-lld, or the "
+          "LLVM/clang package), pass -DPGO_LLD=<path to ld.lld.exe>, or set "
+          "-DPGO_LLVM_BIN_DIR=<directory containing ld.lld.exe>.")
       endif()
-    else()
-      set(CMAKE_${_lt}_LINKER_FLAGS "${CMAKE_${_lt}_LINKER_FLAGS} -fuse-ld=${PGO_LINKER}")
     endif()
-  endforeach()
+  elseif(NOT PGO_LINKER)
+    message(STATUS "[pgo] using the compiler default linker "
+                   "(set -DPGO_LINKER=lld to force lld)")
+  endif()
+
+  if(PGO_LINKER)
+    foreach(_lt EXE SHARED MODULE)
+      string(FIND "${CMAKE_${_lt}_LINKER_FLAGS}" "-fuse-ld=" _pgo_ld_pos)
+      if(NOT _pgo_ld_pos EQUAL -1)
+        string(FIND "${CMAKE_${_lt}_LINKER_FLAGS}" "-fuse-ld=${PGO_LINKER}" _pgo_ld_same)
+        if(_pgo_ld_same EQUAL -1 AND NOT PGO_ALLOW_ANY_LINKER)
+          message(FATAL_ERROR
+            "[pgo] CMAKE_${_lt}_LINKER_FLAGS already contains a different -fuse-ld.\n"
+            "      PGO/LTO needs '${PGO_LINKER}'.  Re-run with "
+            "-DPGO_ALLOW_ANY_LINKER=ON to override (at your own risk).")
+        endif()
+      else()
+        set(CMAKE_${_lt}_LINKER_FLAGS "${CMAKE_${_lt}_LINKER_FLAGS} -fuse-ld=${PGO_LINKER}")
+      endif()
+    endforeach()
+  endif()
 endif()
 
 # ----------------------------------------------------------------------------
@@ -795,6 +1038,29 @@ endif()
 set(_pgo_compile_flags "")
 set(_pgo_link_flags "")
 
+# GCC >= 9: make .gcda names relative to the build directory.  This keeps
+# profiles reusable across build directories and enables AUTO.
+if(_pgo_is_gnu AND (PGO_GENERATE OR PGO_USE)
+   AND NOT CMAKE_CXX_COMPILER_VERSION VERSION_LESS 9
+   AND _pgo_gcc_prefix_native)
+  list(APPEND _pgo_compile_flags "-fprofile-prefix-path=${_pgo_gcc_prefix_native}")
+endif()
+
+if(_pgo_is_msvc)
+  # MSVC PGO/LTO:
+  #   compile: /GL (whole-program code generation)
+  #   link:    /LTCG
+  #   profile: /GENPROFILE:PGD=<file> (GENERATE) and /USEPROFILE:PGD=<file>
+  #            (USE) are per-target linker options added by
+  #            pgo_add_training_target(), because every training executable
+  #            owns its own .pgd.
+  # link.exe does not create the directory of the PGD file.
+  file(MAKE_DIRECTORY "${PGO_PROFILE_DIR}")
+  if(PGO_GENERATE OR PGO_USE OR NOT PGO_LTO STREQUAL "OFF")
+    list(APPEND _pgo_compile_flags "/GL")
+    list(APPEND _pgo_link_flags "/LTCG")
+  endif()
+else()
 if(PGO_GENERATE)
   if(_pgo_is_clang)
     if(PGO_KIND STREQUAL "IR")
@@ -844,6 +1110,9 @@ if(PGO_USE)
     if(NOT PGO_KEEP_WARNINGS)
       list(APPEND _pgo_compile_flags "-Wno-missing-profile")
     endif()
+    if(PGO_WERROR_OUT_OF_DATE)
+      list(APPEND _pgo_compile_flags "-Werror=missing-profile")
+    endif()
     if(NOT CMAKE_CXX_COMPILER_VERSION VERSION_LESS 10)
       list(APPEND _pgo_compile_flags "-fprofile-partial-training")
     endif()
@@ -870,6 +1139,7 @@ if(NOT PGO_LTO STREQUAL "OFF")
     list(APPEND _pgo_link_flags "-flto")
   endif()
 endif()
+endif()  # !_pgo_is_msvc
 
 if(DEFINED PGO_EXTRA_COMPILE_FLAGS)
   list(APPEND _pgo_compile_flags ${PGO_EXTRA_COMPILE_FLAGS})
@@ -883,14 +1153,23 @@ endif()
 # ----------------------------------------------------------------------------
 if(PGO_SCOPE STREQUAL "GLOBAL")
   # Append to CMAKE_*_FLAGS so every target created before or after this
-  # include is covered.
+  # include is covered.  A flag whose value contains spaces (for example a
+  # profile path under "C:/Program Files") must be quoted as one argument.
   foreach(_f ${_pgo_compile_flags})
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${_f}")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${_f}")
+    set(_fq "${_f}")
+    if(_f MATCHES " ")
+      set(_fq "\"${_f}\"")
+    endif()
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${_fq}")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${_fq}")
   endforeach()
   foreach(_f ${_pgo_link_flags})
+    set(_fq "${_f}")
+    if(_f MATCHES " ")
+      set(_fq "\"${_f}\"")
+    endif()
     foreach(_lt EXE SHARED MODULE)
-      set(CMAKE_${_lt}_LINKER_FLAGS "${CMAKE_${_lt}_LINKER_FLAGS} ${_f}")
+      set(CMAKE_${_lt}_LINKER_FLAGS "${CMAKE_${_lt}_LINKER_FLAGS} ${_fq}")
     endforeach()
   endforeach()
   set(_PGO_GLOBAL_COMPILE_FLAGS "${_pgo_compile_flags}" CACHE INTERNAL "pgo global compile flags")
@@ -908,7 +1187,13 @@ function(pgo_apply)
     message(FATAL_ERROR "[pgo] pgo_apply() needs at least one target")
   endif()
   if(PGO_SCOPE STREQUAL "GLOBAL")
-    message(STATUS "[pgo] pgo_apply() is unnecessary with PGO_SCOPE=GLOBAL (all targets already get the flags through CMAKE_*_FLAGS)")
+    if(_pgo_is_msvc)
+      message(STATUS "[pgo] pgo_apply() is unnecessary with PGO_SCOPE=GLOBAL "
+                     "(global /GL + /LTCG; training targets get their profile options "
+                     "from pgo_add_training_target())")
+    else()
+      message(STATUS "[pgo] pgo_apply() is unnecessary with PGO_SCOPE=GLOBAL (all targets already get the flags through CMAKE_*_FLAGS)")
+    endif()
     return()
   endif()
   foreach(_t ${ARGN})
@@ -930,6 +1215,29 @@ function(pgo_add_training_target)
   if(NOT TARGET ${T_EXECUTABLE})
     message(FATAL_ERROR "[pgo] training executable target '${T_EXECUTABLE}' does not exist")
   endif()
+
+  if(_pgo_is_msvc)
+    # MSVC PGO is per-binary: every training executable owns its own .pgd.
+    # /GENPROFILE and /USEPROFILE are LINKER options (cl rejects /GENPROFILE
+    # with D9002); link.exe also merges the <pgd>!*.pgc files written by the
+    # training runs when /USEPROFILE is present.
+    get_target_property(_pgo_msvc_done ${T_EXECUTABLE} _PGO_MSVC_PROFILE_APPLIED)
+    if(NOT _pgo_msvc_done)
+      set(_pgo_pgd "${PGO_PROFILE_DIR}/${T_EXECUTABLE}.pgd")
+      file(TO_CMAKE_PATH "${_pgo_pgd}" _pgo_pgd)
+      target_compile_options(${T_EXECUTABLE} PRIVATE "/GL")
+      target_link_options(${T_EXECUTABLE} PRIVATE "/LTCG")
+      if(PGO_GENERATE)
+        target_link_options(${T_EXECUTABLE} PRIVATE "/GENPROFILE:PGD=${_pgo_pgd}")
+      elseif(PGO_USE)
+        target_link_options(${T_EXECUTABLE} PRIVATE "/USEPROFILE:PGD=${_pgo_pgd}")
+      endif()
+      set_property(TARGET ${T_EXECUTABLE} PROPERTY _PGO_MSVC_PROFILE_APPLIED TRUE)
+      if(PGO_VERBOSE)
+        message(STATUS "[pgo] MSVC profile for ${T_EXECUTABLE}: ${_pgo_pgd}")
+      endif()
+    endif()
+  endif()
   if(NOT T_REPEAT)
     set(T_REPEAT 1)
   endif()
@@ -946,9 +1254,13 @@ function(pgo_add_training_target)
   # explicitly for the training process.  User-provided ENV entries are
   # appended afterwards and therefore win.
   set(_pgo_train_env "")
-  if(WIN32)
-    get_filename_component(_pgo_train_compiler_dir "${CMAKE_CXX_COMPILER}" DIRECTORY)
-    list(APPEND _pgo_train_env "PATH=${_pgo_train_compiler_dir}")
+  set(_pgo_env_separator "")
+  if(_pgo_cxx_bin)
+    # Put the compiler directory first (DLLs: libstdc++/winpthread/pgort140).
+    # NOTE: cmake -E env cannot prepend to PATH portably (no --modify in
+    # CMake 4.4), so this replaces PATH for the training run.  Programs that
+    # need more can append their own PATH via pgo_add_training_target(ENV ...).
+    list(APPEND _pgo_train_env "PATH=${_pgo_cxx_bin}")
   endif()
   if(T_ENV)
     list(APPEND _pgo_train_env ${T_ENV})
@@ -962,10 +1274,25 @@ function(pgo_add_training_target)
       list(APPEND _cmds COMMAND "${CMAKE_COMMAND}" -E env
         "LLVM_PROFILE_FILE=${PGO_PROFILE_DIR}/%m_%p.profraw"
         ${_pgo_train_env}
+        ${_pgo_env_separator}
         "$<TARGET_FILE:${T_EXECUTABLE}>" ${T_COMMAND})
     else()
-      list(APPEND _cmds COMMAND
-        "$<TARGET_FILE:${T_EXECUTABLE}>" ${T_COMMAND})
+      # MSVC/GCC: no LLVM_PROFILE_FILE.  Keep the compiler bin directory on
+      # PATH so the MSVC instrumented executable can find pgort140.dll, and
+      # point VCPROFILE_PATH at the profile directory: without it the MSVC
+      # runtime writes <exe>!N.pgc into the current working directory.
+      if(_pgo_is_msvc)
+        list(APPEND _cmds COMMAND "${CMAKE_COMMAND}" -E env
+          "VCPROFILE_PATH=${PGO_PROFILE_DIR}"
+          ${_pgo_train_env}
+          ${_pgo_env_separator}
+          "$<TARGET_FILE:${T_EXECUTABLE}>" ${T_COMMAND})
+      else()
+        list(APPEND _cmds COMMAND "${CMAKE_COMMAND}" -E env
+          ${_pgo_train_env}
+          ${_pgo_env_separator}
+          "$<TARGET_FILE:${T_EXECUTABLE}>" ${T_COMMAND})
+      endif()
     endif()
   endforeach()
 
@@ -988,7 +1315,13 @@ function(pgo_status)
   endif()
   message(STATUS "[pgo]  PGO_MODE        = ${PGO_MODE}   PGO_KIND = ${PGO_KIND}   PGO_LTO = ${PGO_LTO}")
   if(_pgo_is_clang)
-    set(_pgo_link_disp "${PGO_LINKER}")
+    if(PGO_LINKER)
+      set(_pgo_link_disp "${PGO_LINKER}")
+    else()
+      set(_pgo_link_disp "(compiler default linker)")
+    endif()
+  elseif(_pgo_is_msvc)
+    set(_pgo_link_disp "link.exe (LTCG)")
   else()
     set(_pgo_link_disp "(compiler default linker)")
   endif()
@@ -997,7 +1330,19 @@ function(pgo_status)
   if(_pgo_is_clang)
     message(STATUS "[pgo]  PROFDATA        = ${PGO_PROFDATA}")
     message(STATUS "[pgo]  llvm-profdata   = ${_pgo_profdata_tool}")
+    if(_pgo_lld)
+      message(STATUS "[pgo]  ld.lld          = ${_pgo_lld}")
+    endif()
+    if(PGO_LLVM_BIN_DIR)
+      message(STATUS "[pgo]  LLVM bin dir    = ${PGO_LLVM_BIN_DIR}")
+    endif()
     message(STATUS "[pgo]  resource-dir    = ${_pgo_resource_dir}  (${_pgo_resource_dir_reason})")
+  elseif(_pgo_is_msvc)
+    message(STATUS "[pgo]  PGD dir         = ${PGO_PROFILE_DIR}  (one <target>.pgd per training executable)")
+    message(STATUS "[pgo]  pgomgr          = ${_pgo_pgomgr}")
+  elseif(_pgo_is_gnu)
+    message(STATUS "[pgo]  GCC profile     = .gcda under ${PGO_PROFILE_DIR}")
+    message(STATUS "[pgo]  GCC prefix      = ${_pgo_gcc_prefix_native}")
   endif()
   message(STATUS "[pgo]  compile flags   = ${_pgo_compile_flags}")
   if(_pgo_link_flags)
@@ -1035,14 +1380,59 @@ if(_pgo_is_clang)
     COMMAND "${_pgo_profdata_tool}" show --detailed-summary "${PGO_PROFDATA}"
     COMMENT "[pgo] checking the profile (llvm-profdata show --detailed-summary)"
     VERBATIM)
-else()
-  # GCC: .gcda files are usable as-is, no merge needed.
+elseif(_pgo_is_msvc)
+  # MSVC: link.exe merges <pgd>!*.pgc automatically at /USEPROFILE time,
+  # so pgo-train/pgo-merge only validate the data and print a pgomgr summary.
   add_custom_target(pgo-train
-    COMMENT "[pgo] training complete (GCC: no merge needed; .gcda files are in ${PGO_PROFILE_DIR})")
+    COMMAND "${CMAKE_COMMAND}"
+            "-DPGO_MERGE_KIND=MSVC"
+            "-DPGO_PROFILE_DIR=${PGO_PROFILE_DIR}"
+            "-DPGO_PGOMGR=${_pgo_pgomgr}"
+            -P "${_PGO_SCRIPT}"
+    COMMENT "[pgo] training complete; checking the MSVC .pgd/.pgc files"
+    VERBATIM)
+
   add_custom_target(pgo-merge
-    COMMENT "[pgo] GCC .gcda files need no merge (pgo-merge is a no-op)")
+    COMMAND "${CMAKE_COMMAND}"
+            "-DPGO_MERGE_KIND=MSVC"
+            "-DPGO_PROFILE_DIR=${PGO_PROFILE_DIR}"
+            "-DPGO_PGOMGR=${_pgo_pgomgr}"
+            -P "${_PGO_SCRIPT}"
+    COMMENT "[pgo] MSVC: link.exe merges <pgd>!*.pgc; checking the profile"
+    VERBATIM)
+
   add_custom_target(pgo-check
-    COMMENT "[pgo] in GCC mode inspect the .gcda files under ${PGO_PROFILE_DIR} directly")
+    COMMAND "${CMAKE_COMMAND}"
+            "-DPGO_MERGE_KIND=MSVC"
+            "-DPGO_PROFILE_DIR=${PGO_PROFILE_DIR}"
+            "-DPGO_PGOMGR=${_pgo_pgomgr}"
+            -P "${_PGO_SCRIPT}"
+    COMMENT "[pgo] checking the MSVC profile (pgomgr /summary)"
+    VERBATIM)
+else()
+  # GCC: .gcda files are consumed directly by -fprofile-use; validate them
+  # (count/size) instead of merging.
+  add_custom_target(pgo-train
+    COMMAND "${CMAKE_COMMAND}"
+            "-DPGO_MERGE_KIND=GCC"
+            "-DPGO_PROFILE_DIR=${PGO_PROFILE_DIR}"
+            -P "${_PGO_SCRIPT}"
+    COMMENT "[pgo] training complete; checking the GCC .gcda files"
+    VERBATIM)
+  add_custom_target(pgo-merge
+    COMMAND "${CMAKE_COMMAND}"
+            "-DPGO_MERGE_KIND=GCC"
+            "-DPGO_PROFILE_DIR=${PGO_PROFILE_DIR}"
+            -P "${_PGO_SCRIPT}"
+    COMMENT "[pgo] GCC .gcda files need no merge; checking them"
+    VERBATIM)
+  add_custom_target(pgo-check
+    COMMAND "${CMAKE_COMMAND}"
+            "-DPGO_MERGE_KIND=GCC"
+            "-DPGO_PROFILE_DIR=${PGO_PROFILE_DIR}"
+            -P "${_PGO_SCRIPT}"
+    COMMENT "[pgo] checking the GCC .gcda profile"
+    VERBATIM)
 endif()
 
 add_custom_target(pgo-clean
