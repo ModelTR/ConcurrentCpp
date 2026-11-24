@@ -18,8 +18,10 @@
 
 namespace {
 
+namespace rngs = std::ranges;
+
 TEST(RANDOM_SMOKE, UNIFORM_DRAWS_STAY_IN_RANGE) {
-	auto stream = rng::make_stream(42ull);
+	auto stream = rng::make_stream(42ULL);
 
 	for (int i = 0; i < 128; ++i) {
 		const int integer = stream.uniform(1, 6);
@@ -38,11 +40,11 @@ TEST(RANDOM_SMOKE, UNIFORM_DRAWS_STAY_IN_RANGE) {
 }
 
 TEST(RANDOM_SMOKE, SHUFFLE_PICK_FILL_AND_SYNCHRONIZED_STREAM) {
-	auto stream = rng::make_stream(7ull);
+	auto stream = rng::make_stream(7ULL);
 	vec<int> values{1, 2, 3, 4, 5};
 
 	stream.shuffle(values);
-	std::sort(values.begin(), values.end());
+	rngs::sort(values);
 	EXPECT_EQ(values, (vec<int>{1, 2, 3, 4, 5}));
 
 	const int picked = stream.pick(values);
@@ -50,11 +52,10 @@ TEST(RANDOM_SMOKE, SHUFFLE_PICK_FILL_AND_SYNCHRONIZED_STREAM) {
 
 	std::array<std::byte, 32> buffer{};
 	stream.fill_bytes(buffer);
-	EXPECT_FALSE(std::all_of(buffer.begin(), buffer.end(), [](std::byte byte) {
-		return byte == std::byte{0};
-	}));
+	EXPECT_FALSE(rngs::all_of(
+		buffer, [](std::byte byte) { return byte == std::byte{0}; }));
 
-	rng::synchronized_stream<> synchronized{2024ull};
+	rng::synchronized_stream<> synchronized{2024ULL};
 	const int value = synchronized.uniform(0, 9);
 	EXPECT_GE(value, 0);
 	EXPECT_LE(value, 9);

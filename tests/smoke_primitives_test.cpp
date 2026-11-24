@@ -23,10 +23,10 @@ struct alignas(64) Node {
 };
 
 TEST(COMMON_SMOKE, PACK_ROUND_TRIPS_INDEX_AND_TAG) {
-	const auto packed = concur::details::pack(0x12345678u, 0xABCDu);
+	const auto packed = concur::details::pack(0x12345678U, 0xABCDU);
 
-	EXPECT_EQ(concur::details::idx_of(packed), 0x12345678u);
-	EXPECT_EQ(concur::details::tag_of(packed), 0xABCDu);
+	EXPECT_EQ(concur::details::idx_of(packed), 0x12345678U);
+	EXPECT_EQ(concur::details::tag_of(packed), 0xABCDU);
 }
 
 TEST(ATOMIC_TAGGED_PTR_SMOKE, STORE_AND_SNAPSHOT) {

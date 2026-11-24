@@ -23,8 +23,8 @@ TEST(MUTEX_STACK_SMOKE, DEFAULT_CONSTRUCTED_IS_EMPTY) {
 	concur::Stack<int, 4> stack;
 
 	EXPECT_TRUE(stack.empty());
-	EXPECT_EQ(stack.size(), std::size_t{0});
-	EXPECT_EQ(stack.capacity(), std::size_t{4});
+	EXPECT_EQ(stack.size(), size_t{0});
+	EXPECT_EQ(stack.capacity(), size_t{4});
 }
 
 TEST(MUTEX_STACK_SMOKE, PUSH_POP_IS_LIFO) {
@@ -32,7 +32,7 @@ TEST(MUTEX_STACK_SMOKE, PUSH_POP_IS_LIFO) {
 
 	EXPECT_TRUE(stack.push(1));
 	EXPECT_TRUE(stack.push(2));
-	EXPECT_EQ(stack.size(), std::size_t{2});
+	EXPECT_EQ(stack.size(), size_t{2});
 
 	auto top = stack.pop();
 	ASSERT_TRUE(top.has_value());
@@ -48,7 +48,7 @@ TEST(MUTEX_STACK_SMOKE, PUSH_POP_IS_LIFO) {
 TEST(MUTEX_STACK_SMOKE, FULL_AND_EMPTY_BOUNDARIES) {
 	concur::Stack<int, 2> stack{1, 2};
 
-	EXPECT_EQ(stack.size(), std::size_t{2});
+	EXPECT_EQ(stack.size(), size_t{2});
 	EXPECT_FALSE(stack.push(3));
 
 	EXPECT_TRUE(stack.pop().has_value());
@@ -59,7 +59,7 @@ TEST(MUTEX_STACK_SMOKE, FULL_AND_EMPTY_BOUNDARIES) {
 TEST(MUTEX_STACK_SMOKE, VALUE_CONSTRUCTOR_FILLS_STACK) {
 	concur::Stack<int, 3> stack(2, 7);
 
-	ASSERT_EQ(stack.size(), std::size_t{2});
+	ASSERT_EQ(stack.size(), size_t{2});
 	EXPECT_EQ(stack.pop(), std::optional<int>{7});
 	EXPECT_EQ(stack.pop(), std::optional<int>{7});
 }
@@ -69,8 +69,8 @@ TEST(LOCKFREE_STACK_SMOKE, DEFAULT_CONSTRUCTED_IS_EMPTY) {
 
 	EXPECT_TRUE(stack.empty());
 	EXPECT_FALSE(stack.full());
-	EXPECT_EQ(stack.size(), std::size_t{0});
-	EXPECT_EQ(stack.capacity(), std::size_t{4});
+	EXPECT_EQ(stack.size(), size_t{0});
+	EXPECT_EQ(stack.capacity(), size_t{4});
 }
 
 TEST(LOCKFREE_STACK_SMOKE, PUSH_POP_IS_LIFO) {
@@ -78,7 +78,7 @@ TEST(LOCKFREE_STACK_SMOKE, PUSH_POP_IS_LIFO) {
 
 	EXPECT_TRUE(stack.push(1));
 	EXPECT_TRUE(stack.push(2));
-	EXPECT_EQ(stack.size(), std::size_t{2});
+	EXPECT_EQ(stack.size(), size_t{2});
 
 	auto top = stack.pop();
 	ASSERT_TRUE(top.has_value());
@@ -94,7 +94,7 @@ TEST(LOCKFREE_STACK_SMOKE, PUSH_POP_IS_LIFO) {
 TEST(LOCKFREE_STACK_SMOKE, INITIALIZER_LIST_CONSTRUCTION_POPS_IN_REVERSE) {
 	concur::LockFreeStack<int, 4> stack{1, 2, 3};
 
-	ASSERT_EQ(stack.size(), std::size_t{3});
+	ASSERT_EQ(stack.size(), size_t{3});
 	EXPECT_EQ(stack.pop(), std::optional<int>{3});
 	EXPECT_EQ(stack.pop(), std::optional<int>{2});
 	EXPECT_EQ(stack.pop(), std::optional<int>{1});
@@ -104,7 +104,7 @@ TEST(LOCKFREE_STACK_SMOKE, PUSH_AFTER_INITIALIZATION) {
 	concur::LockFreeStack<int, 4> stack{1, 2, 3};
 
 	EXPECT_TRUE(stack.push(4));
-	EXPECT_EQ(stack.size(), std::size_t{4});
+	EXPECT_EQ(stack.size(), size_t{4});
 	EXPECT_TRUE(stack.full());
 
 	EXPECT_EQ(stack.pop(), std::optional<int>{4});
@@ -115,8 +115,8 @@ TEST(ELIMI_BACKOFF_STACK_SMOKE, DEFAULT_CONSTRUCTED_IS_EMPTY) {
 	concur::ElimiBackoffStack<int, 4> stack;
 
 	EXPECT_TRUE(stack.empty());
-	EXPECT_EQ(stack.size(), std::size_t{0});
-	EXPECT_EQ(stack.capacity(), std::size_t{4});
+	EXPECT_EQ(stack.size(), size_t{0});
+	EXPECT_EQ(stack.capacity(), size_t{4});
 }
 
 TEST(ELIMI_BACKOFF_STACK_SMOKE, PUSH_POP_IS_LIFO) {
@@ -124,7 +124,7 @@ TEST(ELIMI_BACKOFF_STACK_SMOKE, PUSH_POP_IS_LIFO) {
 
 	EXPECT_TRUE(stack.push(1));
 	EXPECT_TRUE(stack.push(2));
-	EXPECT_EQ(stack.size(), std::size_t{2});
+	EXPECT_EQ(stack.size(), size_t{2});
 
 	auto top = stack.pop();
 	ASSERT_TRUE(top.has_value());
@@ -138,7 +138,7 @@ TEST(ELIMI_BACKOFF_STACK_SMOKE, PUSH_POP_IS_LIFO) {
 TEST(ELIMI_BACKOFF_STACK_SMOKE, INITIALIZER_LIST_CONSTRUCTION) {
 	concur::ElimiBackoffStack<int, 4> stack{1, 2, 3};
 
-	ASSERT_EQ(stack.size(), std::size_t{3});
+	ASSERT_EQ(stack.size(), size_t{3});
 	EXPECT_EQ(stack.pop(), std::optional<int>{3});
 	EXPECT_EQ(stack.pop(), std::optional<int>{2});
 	EXPECT_EQ(stack.pop(), std::optional<int>{1});

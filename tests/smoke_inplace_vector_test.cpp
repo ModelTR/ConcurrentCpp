@@ -20,15 +20,15 @@ TEST(INPLACE_VECTOR_SMOKE, DEFAULT_CONSTRUCTED_IS_EMPTY) {
 	concur::inplace_vector<int, 4> values;
 
 	EXPECT_TRUE(values.empty());
-	EXPECT_EQ(values.size(), std::size_t{0});
-	EXPECT_EQ(values.capacity(), std::size_t{4});
+	EXPECT_EQ(values.size(), size_t{0});
+	EXPECT_EQ(values.capacity(), size_t{4});
 }
 
 TEST(INPLACE_VECTOR_SMOKE, PUSH_POP_AND_CAPACITY_LIMIT) {
 	concur::inplace_vector<int, 2> values{1};
 
 	values.push_back(2);
-	ASSERT_EQ(values.size(), std::size_t{2});
+	ASSERT_EQ(values.size(), size_t{2});
 	EXPECT_EQ(values.front(), 1);
 	EXPECT_EQ(values.back(), 2);
 

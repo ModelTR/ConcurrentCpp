@@ -6,17 +6,26 @@ This a pure C++ 20 implementation for serval concurrent containers: forward list
 
 ## Core
 
-- [ ] Concurrent stack
+- [x] Concurrent stack
 - [ ] Concurrent forward list
 - [ ] Concurrent queue
 - [ ] Add module functionality for GNU GCC and Clang complier
-- [ ] Compatibility with GNU GCC, Clang, and MSVC
-- [ ] Compatibility with different build systems:CMake, Meson, Bazel
+- [ ] Compatibility with GNU GCC, Clang, Apple Clang and MSVC
+- [x] Compatibility with different build systems:CMake, Meson, Bazel
+- [ ] Compatibility with IDEs: Visual Studio(temporarily MSVC x86/x64-debug/release configures only)
+- [x] Smoke tests(google/googletest)
+- [x] Benchmark(google/benchmark)
+- [x] Increment Build Cache:
+    - [x] ccache
+    - [x] sccache
+- [ ] PGO support for
+    - [x] Clang
+    - [ ] GCC
+    - [ ] MSVC
 
 ## Other
 
-- [x] Smoke tests(google/googletest)
-- [ ] Benchmark(google/benchmark)
+
 - [ ] CI/CD
 - [ ] More descriptions
 

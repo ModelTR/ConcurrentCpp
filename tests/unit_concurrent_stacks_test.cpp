@@ -26,7 +26,7 @@ constexpr int OPS_PER_THREAD = 256;
 constexpr int TOTAL_OPS = THREADS * OPS_PER_THREAD;
 
 /// @brief Push a value, retrying while a bounded push reports failure.
-template <typename Stack>
+template <class Stack>
 auto push_until_accepted(Stack &stack, int value) -> void {
 	while (!stack.push(value)) {
 		std::this_thread::yield();
@@ -34,7 +34,7 @@ auto push_until_accepted(Stack &stack, int value) -> void {
 }
 
 /// @brief Pop a value, retrying while a bounded pop returns nullopt.
-template <typename Stack> auto pop_until_value(Stack &stack) -> int {
+template <class Stack> auto pop_until_value(Stack &stack) -> int {
 	while (true) {
 		if (auto value = stack.pop()) {
 			return *value;
@@ -43,7 +43,7 @@ template <typename Stack> auto pop_until_value(Stack &stack) -> int {
 	}
 }
 
-template <typename Stack> auto concurrent_push_then_pop() -> void {
+template <class Stack> auto concurrent_push_then_pop() -> void {
 	Stack stack;
 	vec<std::thread> workers;
 	workers.reserve(THREADS);

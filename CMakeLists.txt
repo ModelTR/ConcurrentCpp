@@ -2,7 +2,7 @@
 # Author: modelTR (mxtian_ran@163.com)
 # Brief Serval implemention of concurrent quene (descriptions need to be enriched)
 # Version 0.2
-# Date 2026-11-23
+# Date 2026-11-24
 # Copyright MIT License (c) 2026
 
 cmake_minimum_required(VERSION 4.0.0)
@@ -14,12 +14,27 @@ set(CMAKE_MSVC_DEBUG_INFORMATION_FORMAT
 
 project(CoucurrentCpp LANGUAGES CXX)
 
-find_program(CCACHE_PROGRAM ccache)
-if(CCACHE_PROGRAM AND NOT MSVC)
-    set(CMAKE_C_COMPILER_LAUNCHER "${CCACHE_PROGRAM}")
-    set(CMAKE_CXX_COMPILER_LAUNCHER "${CCACHE_PROGRAM}")
-    message(STATUS "Using ccache: ${CCACHE_PROGRAM}")
+option(USE_CHACHE ON)
+
+if(USE_CHACHE)
+    find_program(SCCACHE_EXECUTABLE NAMES sccache)
+    if(SCCACHE_EXECUTABLE)
+        set(CMAKE_CXX_COMPILER_LAUNCHER "${SCCACHE_EXECUTABLE}")
+        set(CMAKE_C_COMPILER_LAUNCHER "${SCCACHE_EXECUTABLE}")
+        message(STATUS "sccache launcher: ${SCCACHE_EXECUTABLE}")
+    else()
+        find_program(CCACHE_PROGRAM ccache)
+        if(CCACHE_PROGRAM AND NOT MSVC)
+            set(CMAKE_C_COMPILER_LAUNCHER "${CCACHE_PROGRAM}")
+            set(CMAKE_CXX_COMPILER_LAUNCHER "${CCACHE_PROGRAM}")
+            message(STATUS "Using ccache: ${CCACHE_PROGRAM}")
+        else()
+            message(WARNING "Can't find sccache or ccache")
+        endif()
+    endif()
 endif()
+
+
 
 set(CMAKE_CXX_STANDARD 20)
 
@@ -41,7 +56,14 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 # only; the benchmark library and absl stay out of the profile.
 if(NOT MSVC)
     option(PGO "Enable PGO+LTO for the benchmark build" OFF)
-    set(PGO_LTO FULL)
+    if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+        set(PGO_LTO FULL)
+    else()
+        # GCC emits its own LTO objects, which ld.lld cannot consume in this
+        # toolchain (it drops symbols such as gtest_main's main).  GCC PGO is
+        # not supported yet, so keep LTO off for GCC.
+        set(PGO_LTO OFF)
+    endif()
     set(PGO_SCOPE GLOBAL)
     include(cmake/pgo.cmake)
 endif()
@@ -72,8 +94,10 @@ CPMAddPackage(
   NAME googletest
   GIT_REPOSITORY https://v4.gh-proxy.org/https://github.com/google/googletest.git
   GIT_TAG v1.18.0
-  GIT_SHALLOW FALSE
+  GIT_SHALLOW
+  SYSTEM
   OPTIONS "INSTALL_GTEST OFF" "gtest_build_tests OFF" "gmock_build_tests OFF"
+  
 )
 
 # --- absl ------------------------------------------------------------------
@@ -162,12 +186,14 @@ include(CTest)
 if(BUILD_TESTING)
     file(GLOB TEST_FILES tests/*_test.cpp)
 
+    enable_testing()
+
     add_executable(ConcurrentTests ${TEST_FILES})
     target_include_directories(ConcurrentTests PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/include
     )
     target_link_libraries(ConcurrentTests PRIVATE
-        GTest::gtest_main
+        gtest_main
         absl::synchronization
         Threads::Threads
     )
