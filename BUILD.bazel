@@ -40,11 +40,36 @@ _COPTS = select({
     "//conditions:default": _GNU_COPTS,
 })
 
-# CMake links with -static on non-MSVC toolchains.
+# CMake applies -static only on Windows (non-MSVC) and links libatomic on
+# every non-MSVC toolchain.  Two flat selects are concatenated because Bazel
+# does not allow nested select() branches.
+config_setting(
+    name = "windows_gcc",
+    constraint_values = ["@platforms//os:windows"],
+    flag_values = {"@rules_cc//cc/compiler:compiler": "gcc"},
+)
+
+config_setting(
+    name = "windows_mingw_gcc",
+    constraint_values = ["@platforms//os:windows"],
+    flag_values = {"@rules_cc//cc/compiler:compiler": "mingw-gcc"},
+)
+
+config_setting(
+    name = "windows_clang",
+    constraint_values = ["@platforms//os:windows"],
+    flag_values = {"@rules_cc//cc/compiler:compiler": "clang"},
+)
+
 _LINKOPTS = select({
     "@rules_cc//cc/compiler:msvc-cl": [],
     "@rules_cc//cc/compiler:clang-cl": [],
-    "//conditions:default": ["-static"],
+    "//conditions:default": ["-latomic"],
+}) + select({
+    ":windows_gcc": ["-static"],
+    ":windows_mingw_gcc": ["-static"],
+    ":windows_clang": ["-static"],
+    "//conditions:default": [],
 })
 
 # The concurrent containers are header-only under include/.
@@ -64,6 +89,8 @@ cc_binary(
     # src/ is currently empty; allow_empty keeps the glob equivalent to CMake's
     # `file(GLOB SRC_FILES src/*.cpp)`.
     srcs = ["main.cpp"] + glob(["src/*.cpp"], allow_empty = True),
+    # CMake adds both include/ and src/ to this target's include path.
+    includes = ["src"],
     copts = _COPTS,
     linkopts = _LINKOPTS,
     deps = [
@@ -90,6 +117,9 @@ cc_test(
     srcs = glob(["tests/*_test.cpp"]),
     copts = _COPTS,
     linkopts = _LINKOPTS,
+    # CMake registers each gtest case with TIMEOUT 60 and LABELS unit.
+    timeout = "short",
+    tags = ["unit"],
     deps = [
         ":concurrentcpp",
         "@abseil-cpp//absl/synchronization",

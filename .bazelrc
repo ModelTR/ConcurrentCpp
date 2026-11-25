@@ -7,4 +7,12 @@
 build:clang-cl --repo_env=USE_CLANG_CL=1
 build:clang-cl --compiler=clang-cl
 
+# Local action cache: Bazel is incremental by default; this keeps the compiled
+# actions available after `bazel clean` and across workspaces, which is the
+# role CMake's sccache/ccache launcher plays there.
+#   bazel build --config=cache //...
+# The path is relative to the workspace root; %workspace% is not expanded for
+# --disk_cache.
+build:cache --disk_cache=.bazel-cache
+
 try-import %workspace%/.bazelrc.local
