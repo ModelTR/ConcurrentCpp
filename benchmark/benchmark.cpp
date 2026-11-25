@@ -17,14 +17,19 @@
  *    by a small epoch/handshake helper (`Shared`).  No `static` unique_ptr is
  *    destroyed while worker threads are still touching it, and a leftover
  *    `ready` flag can no longer make a thread use the previous run's object.
- *  - `concur::Stack::pop`/`push` and `LockFreeStack::pop`/`push` now return
- *    `std::nullopt`/`false` once their bounded backoff gives up, so an empty
- *    stack cannot spin forever.  Empty pops / failed pushes are counted and
- *    reported as counters instead of being ignored.
- *  - Extra counters (`fail_rate`, `empty_rate`, `cpu_real_ratio`) and extra
- *    statistics (`min`/`max`/`p99`/`range`) are attached to every benchmark so
- *    that the output carries dispersion and efficiency information directly,
- *    without needing to post-process the CSV/JSON.
+ *  - `concur::Stack::push`/`pop` retry a bounded number of times and then
+ *    return `false`/`std::nullopt`; the benchmark loops retry them and count
+ *    those benchmark-level retries.  `LockFreeStack` and `ElimiBackoffStack`
+ *    retry internally until the operation succeeds, so their retry counters
+ *    stay at zero: the retries happen inside the stack, not in the benchmark.
+ *    Do not read `fail_rate`/`waits_per_op` as a cross-implementation
+ *    contention metric for those two stacks.
+ *  - `SetItemsProcessed` is called once per worker with that worker's own item
+ *    count; google/benchmark sums the per-thread values and divides by the
+ *    wall-clock time to produce a global items/s rate.
+ *  - Extra statistics (`min`/`max`/`range`/`iqr`) are attached to every
+ *    benchmark.  p90/p99 are intentionally not registered: with the default
+ *    nine repetitions they would all collapse to the maximum.
  */
 
 #include <benchmark/benchmark.h>
@@ -103,22 +108,6 @@ auto stat_percentile(const vec<double> &v, double p) -> double {
 	return sorted[std::min(rank, sorted.size() - 1)];
 }
 
-auto stat_p99(const vec<double> &v) -> double {
-	return stat_percentile(v, 0.99);
-}
-auto stat_p50(const vec<double> &v) -> double {
-	return stat_percentile(v, 0.50);
-}
-auto stat_p90(const vec<double> &v) -> double {
-	return stat_percentile(v, 0.90);
-}
-auto stat_p95(const vec<double> &v) -> double {
-	return stat_percentile(v, 0.95);
-}
-auto stat_p999(const vec<double> &v) -> double {
-	return stat_percentile(v, 0.999);
-}
-
 auto stat_iqr(const vec<double> &v) -> double {
 	return stat_percentile(v, 0.75) - stat_percentile(v, 0.25);
 }
@@ -127,11 +116,6 @@ auto add_extra_stats(::benchmark::Benchmark *b) -> void {
 	b->ComputeStatistics("min", &stat_min);
 	b->ComputeStatistics("max", &stat_max);
 	b->ComputeStatistics("range", &stat_range);
-	b->ComputeStatistics("p50", &stat_p50);
-	b->ComputeStatistics("p90", &stat_p90);
-	b->ComputeStatistics("p95", &stat_p95);
-	b->ComputeStatistics("p99", &stat_p99);
-	b->ComputeStatistics("p999", &stat_p999);
 	b->ComputeStatistics("iqr", &stat_iqr);
 }
 
@@ -153,18 +137,21 @@ template <typename Stack> struct Shared {
 	std::atomic<Stack *> ptr{nullptr};
 	std::unique_ptr<Stack> owned; // written by thread 0 only
 	atomic::i32 done{0};
-	std::atomic<long> push_fail{0};
-	std::atomic<long> pop_empty{0};
+	// Benchmark-level retry counts.  Retries performed *inside* a stack
+	// implementation are not visible here.
+	atomic::i64 push_retries{0};
+	atomic::i64 pop_retries{0};
 	int nthreads = 0;
 
 	auto acquire(int tid, int threads, size_t prefill) -> Stack * {
 		if (tid == 0) {
 			ptr.store(nullptr, memorder::release);
 			done.store(0, memorder::relaxed);
-			push_fail.store(0, memorder::relaxed);
-			pop_empty.store(0, memorder::relaxed);
+			push_retries.store(0, memorder::relaxed);
+			pop_retries.store(0, memorder::relaxed);
 			owned = std::make_unique<Stack>(std::initializer_list<int>{});
-			for (std::size_t i = 0; i < prefill; ++i) {
+			const auto clamped = std::min(prefill, owned->capacity());
+			for (std::size_t i = 0; i < clamped; ++i) {
 				(void)owned->push(static_cast<int>(i));
 			}
 			nthreads = threads;
@@ -211,7 +198,7 @@ template <typename Stack> auto push_single(benchmark::State &state) -> void {
 	}
 	const auto total_ops =
 		static_cast<double>(state.iterations()) * static_cast<double>(ops);
-	state.counters["push_fail"] = static_cast<double>(failed);
+	state.counters["push_retries"] = static_cast<double>(failed);
 	state.counters["fail_rate"] =
 		total_ops > 0.0 ? static_cast<double>(failed) / total_ops : 0.0;
 	state.SetItemsProcessed(state.iterations() * static_cast<i64>(ops));
@@ -240,8 +227,8 @@ template <typename Stack> auto pop_single(benchmark::State &state) -> void {
 	}
 	const auto total_ops =
 		static_cast<double>(state.iterations()) * static_cast<double>(ops);
-	state.counters["empty_pops"] = static_cast<double>(empty);
-	state.counters["empty_rate"] =
+	state.counters["pop_retries"] = static_cast<double>(empty);
+	state.counters["fail_rate"] =
 		total_ops > 0.0 ? static_cast<double>(empty) / total_ops : 0.0;
 	state.SetItemsProcessed(state.iterations() * static_cast<i64>(ops));
 }
@@ -253,50 +240,53 @@ template <typename Stack> auto mixed_multi(benchmark::State &state) -> void {
 	const int threads = state.threads();
 	const auto ops = static_cast<size_t>(state.range(0));
 	const auto half = ops / 2;
-	Stack *sp =
-		shared.acquire(tid, threads, static_cast<size_t>(threads) * half);
+	// Keep the stack away from both the empty and the full boundary: one
+	// iteration pops `threads * half` items in total, so half the capacity
+	// leaves enough headroom for the mixed workload to stay balanced.
+	Stack *sp = shared.acquire(tid, threads, CAPACITY / 2);
 
 	for (auto _ : state) {
-		long empty = 0;
+		i64 pop_retries = 0;
+		i64 push_retries = 0;
 		for (size_t i = 0; i < half; ++i) {
-			auto v = sp->pop();
-			if (v) {
-				benchmark::DoNotOptimize(*v);
-			} else {
-				++empty;
+			std::optional<int> v;
+			while (!(v = sp->pop())) {
+				++pop_retries;
+				std::this_thread::yield();
 			}
+			benchmark::DoNotOptimize(*v);
 		}
 		for (size_t i = 0; i < half; ++i) {
-			const bool ok = sp->push(static_cast<int>(i + (tid * half)));
-			if (!ok) {
-				shared.push_fail.fetch_add(1, memorder::relaxed);
+			const int value = static_cast<int>(i + (tid * half));
+			while (!sp->push(value)) {
+				++push_retries;
+				std::this_thread::yield();
 			}
-			benchmark::DoNotOptimize(static_cast<int>(ok));
 		}
-		shared.pop_empty.fetch_add(empty, memorder::relaxed);
+		shared.pop_retries.fetch_add(pop_retries, memorder::relaxed);
+		shared.push_retries.fetch_add(push_retries, memorder::relaxed);
 	}
 
 	shared.release(tid);
 	if (tid == 0) {
-		const auto push_fail_v = static_cast<double>(shared.push_fail.load());
-		const auto pop_empty_v = static_cast<double>(shared.pop_empty.load());
-		const auto total_ops = static_cast<double>(state.iterations()) *
-							   static_cast<double>(ops) *
-							   static_cast<double>(threads);
+		const auto push_retries_v =
+			static_cast<double>(shared.push_retries.load());
+		const auto pop_retries_v =
+			static_cast<double>(shared.pop_retries.load());
+		// Each thread performs `half` pushes and `half` pops per iteration.
+		const auto per_side_ops = static_cast<double>(state.iterations()) *
+								  static_cast<double>(half) *
+								  static_cast<double>(threads);
 
-		state.counters["push_fail"] = push_fail_v;
-		state.counters["empty_pops"] = pop_empty_v;
+		state.counters["push_retries"] = push_retries_v;
+		state.counters["pop_retries"] = pop_retries_v;
 		state.counters["fail_rate"] =
-			total_ops > 0.0 ? push_fail_v / total_ops : 0.0;
-		state.counters["empty_rate"] =
-			total_ops > 0.0 ? pop_empty_v / total_ops : 0.0;
-
-		// Average number of cores busy: CPU time is the sum over all threads,
-		// real time is the wall clock.  Ratio < 1 means threads are sleeping
-		// (mutex path); ratio ≈ 1 means every thread is spinning (lock-free).
+			per_side_ops > 0.0 ? push_retries_v / per_side_ops : 0.0;
+		state.counters["waits_per_op"] =
+			per_side_ops > 0.0 ? pop_retries_v / per_side_ops : 0.0;
 	}
-	state.SetItemsProcessed(state.iterations() * static_cast<i64>(ops) *
-							threads);
+	// Every worker reports only its own work; google/benchmark sums them.
+	state.SetItemsProcessed(state.iterations() * static_cast<i64>(ops));
 }
 
 template <typename Stack>
@@ -313,47 +303,51 @@ auto producer_consumer(benchmark::State &state) -> void {
 
 	for (auto _ : state) {
 		if (is_producer) {
+			i64 retries = 0;
 			for (size_t i = 0; i < ops; ++i) {
 				const int v = static_cast<int>(i + (tid * ops));
 				while (!sp->push(v)) {
+					++retries;
 					std::this_thread::yield();
 				}
 			}
+			shared.push_retries.fetch_add(retries, memorder::relaxed);
 		} else {
+			i64 retries = 0;
 			for (std::size_t i = 0; i < ops; ++i) {
 				std::optional<int> v;
 				while (!(v = sp->pop())) {
-					shared.pop_empty.fetch_add(1, memorder::relaxed);
+					++retries;
 					std::this_thread::yield();
 				}
 				benchmark::DoNotOptimize(*v);
 			}
+			shared.pop_retries.fetch_add(retries, memorder::relaxed);
 		}
 	}
 
 	shared.release(tid);
 	if (tid == 0) {
-		const auto push_fail_v = static_cast<double>(shared.push_fail.load());
-		const auto pop_wait_v = static_cast<double>(shared.pop_empty.load());
-		const auto total_ops = static_cast<double>(state.iterations()) *
-							   static_cast<double>(ops) *
-							   static_cast<double>(threads);
+		const auto push_retries_v =
+			static_cast<double>(shared.push_retries.load());
+		const auto pop_retries_v =
+			static_cast<double>(shared.pop_retries.load());
+		// Producers and consumers each perform `ops * threads / 2` logical
+		// operations, so the same denominator serves both rates.
+		const auto per_side_ops = static_cast<double>(state.iterations()) *
+								  static_cast<double>(ops) *
+								  static_cast<double>(threads / 2);
 
-		state.counters["push_fail"] = push_fail_v;
-		state.counters["pop_waits"] = pop_wait_v;
+		state.counters["push_retries"] = push_retries_v;
+		state.counters["pop_retries"] = pop_retries_v;
 		state.counters["fail_rate"] =
-			total_ops > 0.0 ? push_fail_v / total_ops : 0.0;
-		// `pop_waits` counts *spins*, not failed ops; the rate below is
-		// "spins per successful op" and is easier to compare across thread
-		// counts than the raw count.
-		const auto successful_ops = static_cast<double>(state.iterations()) *
-									static_cast<double>(ops) *
-									static_cast<double>(threads) / 2.0;
+			per_side_ops > 0.0 ? push_retries_v / per_side_ops : 0.0;
+		// `pop_retries` counts benchmark-visible spins per successful pop.
 		state.counters["waits_per_op"] =
-			successful_ops > 0.0 ? pop_wait_v / successful_ops : 0.0;
+			per_side_ops > 0.0 ? pop_retries_v / per_side_ops : 0.0;
 	}
-	state.SetItemsProcessed(state.iterations() * static_cast<i64>(ops) *
-							threads);
+	// Each worker performs `ops` logical operations; report only our own.
+	state.SetItemsProcessed(state.iterations() * static_cast<i64>(ops));
 }
 
 /// Producer/consumer with an explicit prefill.  Prefill == capacity starts
@@ -372,41 +366,49 @@ auto producer_consumer_prefilled(benchmark::State &state) -> void {
 
 	for (auto _ : state) {
 		if (is_producer) {
+			i64 retries = 0;
 			for (std::size_t i = 0; i < ops; ++i) {
 				const int v = static_cast<int>(i + (tid * ops));
 				while (!sp->push(v)) {
-					shared.push_fail.fetch_add(1, memorder::relaxed);
+					++retries;
 					std::this_thread::yield();
 				}
 			}
+			shared.push_retries.fetch_add(retries, memorder::relaxed);
 		} else {
+			i64 retries = 0;
 			for (std::size_t i = 0; i < ops; ++i) {
 				std::optional<int> v;
 				while (!(v = sp->pop())) {
-					shared.pop_empty.fetch_add(1, memorder::relaxed);
+					++retries;
 					std::this_thread::yield();
 				}
 				benchmark::DoNotOptimize(*v);
 			}
+			shared.pop_retries.fetch_add(retries, memorder::relaxed);
 		}
 	}
 
 	shared.release(tid);
 	if (tid == 0) {
-		const auto push_fail_v = static_cast<double>(shared.push_fail.load());
-		const auto pop_wait_v = static_cast<double>(shared.pop_empty.load());
-		const auto total_ops = static_cast<double>(state.iterations()) *
-							   static_cast<double>(ops) *
-							   static_cast<double>(threads);
-		state.counters["push_fail"] = push_fail_v;
-		state.counters["pop_waits"] = pop_wait_v;
+		const auto push_retries_v =
+			static_cast<double>(shared.push_retries.load());
+		const auto pop_retries_v =
+			static_cast<double>(shared.pop_retries.load());
+		// Producers and consumers each perform `ops * threads / 2` logical
+		// operations, so the same denominator serves both rates.
+		const auto per_side_ops = static_cast<double>(state.iterations()) *
+								  static_cast<double>(ops) *
+								  static_cast<double>(threads / 2);
+		state.counters["push_retries"] = push_retries_v;
+		state.counters["pop_retries"] = pop_retries_v;
 		state.counters["fail_rate"] =
-			total_ops > 0.0 ? push_fail_v / total_ops : 0.0;
+			per_side_ops > 0.0 ? push_retries_v / per_side_ops : 0.0;
 		state.counters["waits_per_op"] =
-			total_ops > 0.0 ? pop_wait_v / total_ops : 0.0;
+			per_side_ops > 0.0 ? pop_retries_v / per_side_ops : 0.0;
 	}
-	state.SetItemsProcessed(state.iterations() * static_cast<i64>(ops) *
-							threads);
+	// Each worker performs `ops` logical operations; report only our own.
+	state.SetItemsProcessed(state.iterations() * static_cast<i64>(ops));
 }
 
 /// Imbalanced producer/consumer split: Producers threads push and threads -
@@ -432,36 +434,56 @@ auto imbalanced(benchmark::State &state) -> void {
 	const bool is_producer = (tid < Producers);
 
 	Stack *sp = shared.acquire(tid, threads, 0);
+	const auto my_ops = is_producer ? producer_ops : consumer_ops;
 
 	for (auto _ : state) {
 		if (is_producer) {
+			i64 retries = 0;
 			for (std::size_t i = 0; i < producer_ops; ++i) {
 				const int v = static_cast<int>(i + (tid * producer_ops));
 				while (!sp->push(v)) {
-					shared.push_fail.fetch_add(1, memorder::relaxed);
+					++retries;
 					std::this_thread::yield();
 				}
 			}
+			shared.push_retries.fetch_add(retries, memorder::relaxed);
 		} else {
+			i64 retries = 0;
 			for (std::size_t i = 0; i < consumer_ops; ++i) {
 				std::optional<int> v;
 				while (!(v = sp->pop())) {
-					shared.pop_empty.fetch_add(1, memorder::relaxed);
+					++retries;
 					std::this_thread::yield();
 				}
 				benchmark::DoNotOptimize(*v);
 			}
+			shared.pop_retries.fetch_add(retries, memorder::relaxed);
 		}
 	}
 
 	shared.release(tid);
 	if (tid == 0) {
-		state.counters["push_fail"] =
-			static_cast<double>(shared.push_fail.load());
-		state.counters["pop_waits"] =
-			static_cast<double>(shared.pop_empty.load());
+		const auto push_retries_v =
+			static_cast<double>(shared.push_retries.load());
+		const auto pop_retries_v =
+			static_cast<double>(shared.pop_retries.load());
+		// Producer and consumer populations can differ; use each side's own
+		// logical operation count as the denominator.
+		const auto producer_total = static_cast<double>(state.iterations()) *
+									static_cast<double>(producer_ops) *
+									static_cast<double>(Producers);
+		const auto consumer_total = static_cast<double>(state.iterations()) *
+									static_cast<double>(consumer_ops) *
+									static_cast<double>(consumers);
+		state.counters["push_retries"] = push_retries_v;
+		state.counters["pop_retries"] = pop_retries_v;
+		state.counters["fail_rate"] =
+			producer_total > 0.0 ? push_retries_v / producer_total : 0.0;
+		state.counters["waits_per_op"] =
+			consumer_total > 0.0 ? pop_retries_v / consumer_total : 0.0;
 	}
-	state.SetItemsProcessed(state.iterations() * static_cast<i64>(total) * 2);
+	// Report this thread's own logical operation count, not the global total.
+	state.SetItemsProcessed(state.iterations() * static_cast<i64>(my_ops));
 }
 
 // NOLINTBEGIN(bugprone-throwing-static-initialization)
@@ -667,7 +689,8 @@ class CompactReporter : public benchmark::BenchmarkReporter {
 public:
 	auto ReportContext(const Context &) -> bool override {
 		auto &out = GetOutputStream();
-		out << "Benchmark | mean | CV | items/s | fail | empty | waits\n";
+		out << "Benchmark | mean | CV | items/s | push_retries | pop_retries | "
+			   "fail_rate | waits/op\n";
 		out << "-----------------------------------------------------------\n";
 		return true;
 	}
@@ -710,11 +733,14 @@ public:
 		auto &out = GetOutputStream();
 		out << std::fixed << std::setprecision(2);
 		out << base->run_name.str() << " | " << base->GetAdjustedRealTime()
-			<< " ns | CV " << (cv != nullptr ? cv->real_accumulated_time : 0.0)
-			<< "% | " << counter("items_per_second") / 1e6 << " M/s | fail "
-			<< counter("fail_rate") * 100.0 << "% | empty "
-			<< counter("empty_rate") * 100.0 << "% | waits "
-			<< counter("pop_waits") << '\n';
+			<< " ns | CV "
+			// `cv` stores the coefficient of variation as a fraction
+			// (0.05 == 5%), so scale it before printing a percentage.
+			<< (cv != nullptr ? cv->real_accumulated_time * 100.0 : 0.0)
+			<< "% | " << counter("items_per_second") / 1e6 << " M/s | "
+			<< counter("push_retries") << " | " << counter("pop_retries")
+			<< " | " << counter("fail_rate") * 100.0 << "% | "
+			<< counter("waits_per_op") << '\n';
 	}
 };
 

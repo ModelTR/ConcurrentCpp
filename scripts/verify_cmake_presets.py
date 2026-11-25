@@ -695,7 +695,10 @@ def program_available(value: str | None, env: dict[str, str]) -> bool:
 
 
 def toolchain_family(cache: dict[str, str]) -> str:
-    """Classify the toolchain family from the configured C/C++ compilers."""
+    """Classify the toolchain family from the preset or the compilers."""
+    kind = cache.get("MSYS2_UCRT64_COMPILER_KIND")
+    if kind in {"clang", "gcc"}:
+        return kind
     compiler = cache.get("CMAKE_CXX_COMPILER") or cache.get("CMAKE_C_COMPILER") or ""
     stem = _program_stem(compiler)
     if stem.startswith("clang"):

@@ -137,14 +137,11 @@
                 "lhs": "${hostSystemName}",
                 "rhs": "Windows"
             },
-            "environment": {
-                "PATH": "$penv{MSYS2_ROOT}/ucrt64/bin;${pathListSep}$penv{PATH}"
-            },
             "cacheVariables": {
-                "CMAKE_C_COMPILER": "clang.exe",
-                "CMAKE_CXX_COMPILER": "clang++.exe",
-                "CMAKE_INSTALL_PREFIX": "${sourceDir}/install"
-            }
+                "CMAKE_INSTALL_PREFIX": "${sourceDir}/install",
+                "MSYS2_UCRT64_COMPILER_KIND": "clang"
+            },
+            "toolchainFile": "${sourceDir}/cmake/toolchains/msys2-ucrt64.cmake"
         },
         {
             "name": "MSYS2 UCRT Clang x64-debug",
@@ -202,21 +199,8 @@
             "name": "MSYS2 UCRT Clang sccache",
             "hidden": true,
             "description": "MSYS2 UCRT Clang | Need Sccache",
-            "generator": "Ninja",
-            "binaryDir": "${sourceDir}/build",
-            "installDir": "${sourceDir}/install",
-            "condition": {
-                "type": "equals",
-                "lhs": "${hostSystemName}",
-                "rhs": "Windows"
-            },
-            "environment": {
-                "PATH": "$penv{MSYS2_ROOT}/ucrt64/bin;${pathListSep}$penv{PATH}"
-            },
+            "inherits": "MSYS2 UCRT Clang",
             "cacheVariables": {
-                "CMAKE_C_COMPILER": "clang.exe",
-                "CMAKE_CXX_COMPILER": "clang++.exe",
-                "CMAKE_INSTALL_PREFIX": "${sourceDir}/install",
                 "CMAKE_CXX_COMPILER_LAUNCHER": "sccache",
                 "CMAKE_C_COMPILER_LAUNCHER": "sccache"
             }
@@ -277,21 +261,8 @@
             "name": "MSYS2 UCRT Clang ccache",
             "hidden": true,
             "description": "MSYS2 UCRT Clang | Need ccache",
-            "generator": "Ninja",
-            "binaryDir": "${sourceDir}/build",
-            "installDir": "${sourceDir}/install",
-            "condition": {
-                "type": "equals",
-                "lhs": "${hostSystemName}",
-                "rhs": "Windows"
-            },
-            "environment": {
-                "PATH": "$penv{MSYS2_ROOT}/ucrt64/bin;${pathListSep}$penv{PATH}"
-            },
+            "inherits": "MSYS2 UCRT Clang",
             "cacheVariables": {
-                "CMAKE_C_COMPILER": "clang.exe",
-                "CMAKE_CXX_COMPILER": "clang++.exe",
-                "CMAKE_INSTALL_PREFIX": "${sourceDir}/install",
                 "CMAKE_CXX_COMPILER_LAUNCHER": "ccache",
                 "CMAKE_C_COMPILER_LAUNCHER": "ccache"
             }
@@ -360,14 +331,11 @@
                 "lhs": "${hostSystemName}",
                 "rhs": "Windows"
             },
-            "environment": {
-                "PATH": "$penv{MSYS2_ROOT}/ucrt64/bin;${pathListSep}$penv{PATH}"
-            },
             "cacheVariables": {
-                "CMAKE_C_COMPILER": "gcc.exe",
-                "CMAKE_CXX_COMPILER": "g++.exe",
-                "CMAKE_INSTALL_PREFIX": "${sourceDir}/install"
-            }
+                "CMAKE_INSTALL_PREFIX": "${sourceDir}/install",
+                "MSYS2_UCRT64_COMPILER_KIND": "gcc"
+            },
+            "toolchainFile": "${sourceDir}/cmake/toolchains/msys2-ucrt64.cmake"
         },
         {
             "name": "MSYS2 UCRT GCC x64-debug",
@@ -425,21 +393,8 @@
             "name": "MSYS2 UCRT GCC sccache",
             "hidden": true,
             "description": "MSYS2 GCC | Need sccache",
-            "generator": "Ninja",
-            "binaryDir": "${sourceDir}/build",
-            "installDir": "${sourceDir}/install",
-            "condition": {
-                "type": "equals",
-                "lhs": "${hostSystemName}",
-                "rhs": "Windows"
-            },
-            "environment": {
-                "PATH": "$penv{MSYS2_ROOT}/ucrt64/bin;${pathListSep}$penv{PATH}"
-            },
+            "inherits": "MSYS2 UCRT GCC",
             "cacheVariables": {
-                "CMAKE_C_COMPILER": "gcc.exe",
-                "CMAKE_CXX_COMPILER": "g++.exe",
-                "CMAKE_INSTALL_PREFIX": "${sourceDir}/install",
                 "CMAKE_CXX_COMPILER_LAUNCHER": "sccache",
                 "CMAKE_C_COMPILER_LAUNCHER": "sccache"
             }
@@ -500,21 +455,8 @@
             "name": "MSYS2 UCRT GCC ccache",
             "hidden": true,
             "description": "MSYS2 GCC | Need ccache",
-            "generator": "Ninja",
-            "binaryDir": "${sourceDir}/build",
-            "installDir": "${sourceDir}/install",
-            "condition": {
-                "type": "equals",
-                "lhs": "${hostSystemName}",
-                "rhs": "Windows"
-            },
-            "environment": {
-                "PATH": "$penv{MSYS2_ROOT}/ucrt64/bin;${pathListSep}$penv{PATH}"
-            },
+            "inherits": "MSYS2 UCRT GCC",
             "cacheVariables": {
-                "CMAKE_C_COMPILER": "gcc.exe",
-                "CMAKE_CXX_COMPILER": "g++.exe",
-                "CMAKE_INSTALL_PREFIX": "${sourceDir}/install",
                 "CMAKE_CXX_COMPILER_LAUNCHER": "ccache",
                 "CMAKE_C_COMPILER_LAUNCHER": "ccache"
             }
