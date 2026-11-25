@@ -60,31 +60,33 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 if(MSVC OR CMAKE_CXX_COMPILER_ID MATCHES "Clang"
    OR CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     option(PGO "Enable PGO for the benchmark build" OFF)
-    if(NOT DEFINED PGO_LTO)
-        if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-            set(PGO_LTO OFF)
-        elseif(MSVC OR WIN32)
-            set(PGO_LTO FULL)
-        else()
-            find_program(PGO_LLD_EXECUTABLE NAMES ld.lld lld)
-            if(PGO_LLD_EXECUTABLE)
+    if(PGO OR PGO_MODE STREQUAL "GENERATE")
+        if(NOT DEFINED PGO_LTO)
+            if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+                set(PGO_LTO OFF)
+            elseif(MSVC OR WIN32)
                 set(PGO_LTO FULL)
             else()
-                set(PGO_LTO OFF)
-                message(STATUS
-                    "PGO/LTO: lld not found; default LTO disabled on this "
-                    "platform (pass -DPGO_LTO=FULL to force it)")
+                find_program(PGO_LLD_EXECUTABLE NAMES ld.lld lld)
+                if(PGO_LLD_EXECUTABLE)
+                    set(PGO_LTO FULL)
+                else()
+                    set(PGO_LTO OFF)
+                    message(STATUS
+                        "PGO/LTO: lld not found; default LTO disabled on this "
+                        "platform (pass -DPGO_LTO=FULL to force it)")
+                endif()
             endif()
         endif()
+        set(PGO_SCOPE GLOBAL)
+        # Set -DPGO_TRAINING_FILTER=.* to train on every benchmark.
+        set(PGO_TRAINING_FILTER ".*" CACHE STRING
+            "Google Benchmark filter for the PGO training workload")
+        # Forward the filter to the AUTO bootstrap sub-build; PGO_ variables are
+        # otherwise excluded from automatic cache forwarding.
+        set(PGO_FORWARD_VARS PGO_TRAINING_FILTER)
+        include(cmake/pgo.cmake)
     endif()
-    set(PGO_SCOPE GLOBAL)
-    # Set -DPGO_TRAINING_FILTER=.* to train on every benchmark.
-    set(PGO_TRAINING_FILTER ".*" CACHE STRING
-        "Google Benchmark filter for the PGO training workload")
-    # Forward the filter to the AUTO bootstrap sub-build; PGO_ variables are
-    # otherwise excluded from automatic cache forwarding.
-    set(PGO_FORWARD_VARS PGO_TRAINING_FILTER)
-    include(cmake/pgo.cmake)
 else()
     message(STATUS
         "PGO is enabled only for Clang, GCC and MSVC; "
