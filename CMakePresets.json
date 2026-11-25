@@ -2,11 +2,11 @@
     "version": 6,
     "configurePresets": [
         {
-            "name": "MSVC",
+            "name": "msvc",
             "description": "Visual Studio",
             "hidden": true,
             "generator": "Ninja",
-            "binaryDir": "${sourceDir}/build",
+            "binaryDir": "${sourceDir}/build/${presetName}",
             "installDir": "${sourceDir}/install",
             "cacheVariables": {
                 "CMAKE_C_COMPILER": "cl.exe",
@@ -19,10 +19,10 @@
             }
         },
         {
-            "name": "MSVC x64-debug",
+            "name": "msvc-x64-debug",
             "displayName": "MSVC x64-Debug",
             "description": "Visual Studio",
-            "inherits": "MSVC",
+            "inherits": "msvc",
             "architecture": {
                 "value": "x64",
                 "strategy": "external"
@@ -32,19 +32,19 @@
             }
         },
         {
-            "name": "MSVC x64-release",
+            "name": "msvc-x64-release",
             "displayName": "MSVC x64-Release",
             "description": "Visual Studio",
-            "inherits": "MSVC x64-debug",
+            "inherits": "msvc-x64-debug",
             "cacheVariables": {
                 "CMAKE_BUILD_TYPE": "Release"
             }
         },
         {
-            "name": "MSVC x86-debug",
+            "name": "msvc-x86-debug",
             "displayName": "MSVC x86 Debug",
             "description": "Visual Studio",
-            "inherits": "MSVC",
+            "inherits": "msvc",
             "architecture": {
                 "value": "x86",
                 "strategy": "external"
@@ -54,20 +54,20 @@
             }
         },
         {
-            "name": "MSVC x86-release",
+            "name": "msvc-x86-release",
             "displayName": "MSVC x86 Release",
             "description": "Visual Studio",
-            "inherits": "MSVC x86-debug",
+            "inherits": "msvc-x86-debug",
             "cacheVariables": {
                 "CMAKE_BUILD_TYPE": "Release"
             }
         },
         {
-            "name": "MSVC sccache",
+            "name": "msvc-sccache",
             "description": "Visual Studio | Need Sccache",
             "hidden": true,
             "generator": "Ninja",
-            "binaryDir": "${sourceDir}/build",
+            "binaryDir": "${sourceDir}/build/${presetName}",
             "installDir": "${sourceDir}/install",
             "cacheVariables": {
                 "CMAKE_C_COMPILER": "cl.exe",
@@ -82,10 +82,10 @@
             }
         },
         {
-            "name": "MSVC x64-debug sccache",
+            "name": "msvc-x64-debug-sccache",
             "displayName": "MSVC x64-Debug sccache",
             "description": "Visual Studio | Need Sccache",
-            "inherits": "MSVC sccache",
+            "inherits": "msvc-sccache",
             "architecture": {
                 "value": "x64",
                 "strategy": "external"
@@ -95,19 +95,19 @@
             }
         },
         {
-            "name": "MSVC x64-release sccache",
+            "name": "msvc-x64-release-sccache",
             "displayName": "MSVC x64-Release sccache",
             "description": "Visual Studio | Need Sccache",
-            "inherits": "MSVC x64-debug sccache",
+            "inherits": "msvc-x64-debug-sccache",
             "cacheVariables": {
                 "CMAKE_BUILD_TYPE": "Release"
             }
         },
         {
-            "name": "MSVC x86-debug sccache",
+            "name": "msvc-x86-debug-sccache",
             "displayName": "MSVC x86 Debug sccache",
             "description": "Visual Studio | Need Sccache",
-            "inherits": "MSVC sccache",
+            "inherits": "msvc-sccache",
             "architecture": {
                 "value": "x86",
                 "strategy": "external"
@@ -117,20 +117,20 @@
             }
         },
         {
-            "name": "MSVC x86-release sccache",
+            "name": "msvc-x86-release-sccache",
             "displayName": "MSVC x86 Release sccache",
             "description": "Visual Studio | Need Sccache",
-            "inherits": "MSVC x86-debug sccache",
+            "inherits": "msvc-x86-debug-sccache",
             "cacheVariables": {
                 "CMAKE_BUILD_TYPE": "Release"
             }
         },
         {
-            "name": "MSYS2 UCRT Clang",
+            "name": "ucrt-clang",
             "hidden": true,
             "description": "MSYS2 UCRT Clang",
             "generator": "Ninja",
-            "binaryDir": "${sourceDir}/build",
+            "binaryDir": "${sourceDir}/build/${presetName}",
             "installDir": "${sourceDir}/install",
             "condition": {
                 "type": "equals",
@@ -144,10 +144,10 @@
             "toolchainFile": "${sourceDir}/cmake/toolchains/msys2-ucrt64.cmake"
         },
         {
-            "name": "MSYS2 UCRT Clang x64-debug",
+            "name": "ucrt-clang-x64-debug",
             "displayName": "UCRT Clang x64-Debug",
             "description": "MSYS2 UCRT Clang",
-            "inherits": "MSYS2 UCRT Clang",
+            "inherits": "ucrt-clang",
             "architecture": {
                 "value": "x64",
                 "strategy": "external"
@@ -157,10 +157,10 @@
             }
         },
         {
-            "name": "MSYS2 UCRT Clang x64-release",
+            "name": "ucrt-clang-x64-release",
             "displayName": "UCRT Clang x64-Release",
             "description": "MSYS2 UCRT Clang",
-            "inherits": "MSYS2 UCRT Clang",
+            "inherits": "ucrt-clang",
             "architecture": {
                 "value": "x64",
                 "strategy": "external"
@@ -170,10 +170,10 @@
             }
         },
         {
-            "name": "MSYS2 UCRT Clang x86-debug",
+            "name": "ucrt-clang-x86-debug",
             "displayName": "UCRT Clang x86-Debug",
             "description": "MSYS2 UCRT Clang",
-            "inherits": "MSYS2 UCRT Clang",
+            "inherits": "ucrt-clang",
             "architecture": {
                 "value": "x86",
                 "strategy": "external"
@@ -183,10 +183,10 @@
             }
         },
         {
-            "name": "MSYS2 UCRT Clang x86-release",
+            "name": "ucrt-clang-x86-release",
             "displayName": "UCRT Clang x86-Release",
             "description": "MSYS2 UCRT Clang",
-            "inherits": "MSYS2 UCRT Clang",
+            "inherits": "ucrt-clang",
             "architecture": {
                 "value": "x86",
                 "strategy": "external"
@@ -196,20 +196,20 @@
             }
         },
         {
-            "name": "MSYS2 UCRT Clang sccache",
+            "name": "ucrt-clang-sccache",
             "hidden": true,
             "description": "MSYS2 UCRT Clang | Need Sccache",
-            "inherits": "MSYS2 UCRT Clang",
+            "inherits": "ucrt-clang",
             "cacheVariables": {
                 "CMAKE_CXX_COMPILER_LAUNCHER": "sccache",
                 "CMAKE_C_COMPILER_LAUNCHER": "sccache"
             }
         },
         {
-            "name": "MSYS2 UCRT Clang x64-debug sccache",
+            "name": "ucrt-clang-x64-debug-sccache",
             "displayName": "UCRT Clang x64-Debug sccache",
             "description": "MSYS2 UCRT Clang | Need Sccache",
-            "inherits": "MSYS2 UCRT Clang sccache",
+            "inherits": "ucrt-clang-sccache",
             "architecture": {
                 "value": "x64",
                 "strategy": "external"
@@ -219,10 +219,10 @@
             }
         },
         {
-            "name": "MSYS2 UCRT Clang x64-release sccache",
+            "name": "ucrt-clang-x64-release-sccache",
             "displayName": "UCRT Clang x64-Release sccache",
             "description": "MSYS2 UCRT Clang | Need Sccache",
-            "inherits": "MSYS2 UCRT Clang sccache",
+            "inherits": "ucrt-clang-sccache",
             "architecture": {
                 "value": "x64",
                 "strategy": "external"
@@ -232,10 +232,10 @@
             }
         },
         {
-            "name": "MSYS2 UCRT Clang x86-debug sccache",
+            "name": "ucrt-clang-x86-debug-sccache",
             "displayName": "UCRT Clang x86-Debug sccache",
             "description": "MSYS2 UCRT Clang | Need Sccache",
-            "inherits": "MSYS2 UCRT Clang sccache",
+            "inherits": "ucrt-clang-sccache",
             "architecture": {
                 "value": "x86",
                 "strategy": "external"
@@ -245,10 +245,10 @@
             }
         },
         {
-            "name": "MSYS2 UCRT Clang x86-release sccache",
+            "name": "ucrt-clang-x86-release-sccache",
             "displayName": "UCRT Clang x86-Release sccache",
             "description": "MSYS2 UCRT Clang | Need Sccache",
-            "inherits": "MSYS2 UCRT Clang sccache",
+            "inherits": "ucrt-clang-sccache",
             "architecture": {
                 "value": "x86",
                 "strategy": "external"
@@ -258,20 +258,20 @@
             }
         },
         {
-            "name": "MSYS2 UCRT Clang ccache",
+            "name": "ucrt-clang-ccache",
             "hidden": true,
             "description": "MSYS2 UCRT Clang | Need ccache",
-            "inherits": "MSYS2 UCRT Clang",
+            "inherits": "ucrt-clang",
             "cacheVariables": {
                 "CMAKE_CXX_COMPILER_LAUNCHER": "ccache",
                 "CMAKE_C_COMPILER_LAUNCHER": "ccache"
             }
         },
         {
-            "name": "MSYS2 UCRT Clang x64-debug ccache",
+            "name": "ucrt-clang-x64-debug-ccache",
             "displayName": "UCRT Clang x64-Debug ccache",
             "description": "MSYS2 UCRT Clang | Need ccache",
-            "inherits": "MSYS2 UCRT Clang ccache",
+            "inherits": "ucrt-clang-ccache",
             "architecture": {
                 "value": "x64",
                 "strategy": "external"
@@ -281,10 +281,10 @@
             }
         },
         {
-            "name": "MSYS2 UCRT Clang x64-release ccache",
+            "name": "ucrt-clang-x64-release-ccache",
             "displayName": "UCRT Clang x64-Release ccache",
             "description": "MSYS2 UCRT Clang | Need ccache",
-            "inherits": "MSYS2 UCRT Clang ccache",
+            "inherits": "ucrt-clang-ccache",
             "architecture": {
                 "value": "x64",
                 "strategy": "external"
@@ -294,10 +294,10 @@
             }
         },
         {
-            "name": "MSYS2 UCRT Clang x86-debug ccache",
+            "name": "ucrt-clang-x86-debug-ccache",
             "displayName": "UCRT Clang x86-Debug ccache",
             "description": "MSYS2 UCRT Clang | Need ccache",
-            "inherits": "MSYS2 UCRT Clang ccache",
+            "inherits": "ucrt-clang-ccache",
             "architecture": {
                 "value": "x86",
                 "strategy": "external"
@@ -307,10 +307,10 @@
             }
         },
         {
-            "name": "MSYS2 UCRT Clang x86-release ccache",
+            "name": "ucrt-clang-x86-release-ccache",
             "displayName": "UCRT Clang x86-Release ccache",
             "description": "MSYS2 UCRT Clang | Need ccache",
-            "inherits": "MSYS2 UCRT Clang ccache",
+            "inherits": "ucrt-clang-ccache",
             "architecture": {
                 "value": "x86",
                 "strategy": "external"
@@ -320,11 +320,11 @@
             }
         },
         {
-            "name": "MSYS2 UCRT GCC",
+            "name": "ucrt-gcc",
             "hidden": true,
             "description": "MSYS2 GCC Clang",
             "generator": "Ninja",
-            "binaryDir": "${sourceDir}/build",
+            "binaryDir": "${sourceDir}/build/${presetName}",
             "installDir": "${sourceDir}/install",
             "condition": {
                 "type": "equals",
@@ -338,10 +338,10 @@
             "toolchainFile": "${sourceDir}/cmake/toolchains/msys2-ucrt64.cmake"
         },
         {
-            "name": "MSYS2 UCRT GCC x64-debug",
+            "name": "ucrt-gcc-x64-debug",
             "displayName": "UCRT GCC x64-debug",
             "description": "MSYS2 UCRT GCC",
-            "inherits": "MSYS2 UCRT GCC",
+            "inherits": "ucrt-gcc",
             "architecture": {
                 "value": "x64",
                 "strategy": "external"
@@ -351,10 +351,10 @@
             }
         },
         {
-            "name": "MSYS2 UCRT GCC x64-release",
+            "name": "ucrt-gcc-x64-release",
             "displayName": "UCRT GCC x64-release",
             "description": "MSYS2 UCRT GCC",
-            "inherits": "MSYS2 UCRT GCC",
+            "inherits": "ucrt-gcc",
             "architecture": {
                 "value": "x64",
                 "strategy": "external"
@@ -364,10 +364,10 @@
             }
         },
         {
-            "name": "MSYS2 UCRT GCC x86-debug",
+            "name": "ucrt-gcc-x86-debug",
             "displayName": "UCRT GCC x86-debug",
             "description": "MSYS2 UCRT GCC",
-            "inherits": "MSYS2 UCRT GCC",
+            "inherits": "ucrt-gcc",
             "architecture": {
                 "value": "x86",
                 "strategy": "external"
@@ -377,10 +377,10 @@
             }
         },
         {
-            "name": "MSYS2 UCRT GCC x86-release",
+            "name": "ucrt-gcc-x86-release",
             "displayName": "UCRT GCC x86-release",
             "description": "MSYS2 UCRT GCC",
-            "inherits": "MSYS2 UCRT GCC",
+            "inherits": "ucrt-gcc",
             "architecture": {
                 "value": "x86",
                 "strategy": "external"
@@ -390,20 +390,20 @@
             }
         },
         {
-            "name": "MSYS2 UCRT GCC sccache",
+            "name": "ucrt-gcc-sccache",
             "hidden": true,
             "description": "MSYS2 GCC | Need sccache",
-            "inherits": "MSYS2 UCRT GCC",
+            "inherits": "ucrt-gcc",
             "cacheVariables": {
                 "CMAKE_CXX_COMPILER_LAUNCHER": "sccache",
                 "CMAKE_C_COMPILER_LAUNCHER": "sccache"
             }
         },
         {
-            "name": "MSYS2 UCRT GCC x64-debug sccache",
+            "name": "ucrt-gcc-x64-debug-sccache",
             "displayName": "UCRT GCC x64-Debug sccache",
             "description": "MSYS2 UCRT GCC | Need Sccache",
-            "inherits": "MSYS2 UCRT GCC sccache",
+            "inherits": "ucrt-gcc-sccache",
             "architecture": {
                 "value": "x64",
                 "strategy": "external"
@@ -413,10 +413,10 @@
             }
         },
         {
-            "name": "MSYS2 UCRT GCC x64-release sccache",
+            "name": "ucrt-gcc-x64-release-sccache",
             "displayName": "UCRT GCC x64-Release sccache",
             "description": "MSYS2 UCRT GCC | Need Sccache",
-            "inherits": "MSYS2 UCRT GCC sccache",
+            "inherits": "ucrt-gcc-sccache",
             "architecture": {
                 "value": "x64",
                 "strategy": "external"
@@ -426,10 +426,10 @@
             }
         },
         {
-            "name": "MSYS2 UCRT GCC x86-debug sccache",
+            "name": "ucrt-gcc-x86-debug-sccache",
             "displayName": "UCRT GCC x86-Debug sccache",
             "description": "MSYS2 UCRT GCC | Need Sccache",
-            "inherits": "MSYS2 UCRT GCC sccache",
+            "inherits": "ucrt-gcc-sccache",
             "architecture": {
                 "value": "x86",
                 "strategy": "external"
@@ -439,10 +439,10 @@
             }
         },
         {
-            "name": "MSYS2 UCRT GCC x86-release sccache",
+            "name": "ucrt-gcc-x86-release-sccache",
             "displayName": "UCRT GCC x86-Release sccache",
             "description": "MSYS2 UCRT GCC | Need Sccache",
-            "inherits": "MSYS2 UCRT GCC sccache",
+            "inherits": "ucrt-gcc-sccache",
             "architecture": {
                 "value": "x86",
                 "strategy": "external"
@@ -452,20 +452,20 @@
             }
         },
         {
-            "name": "MSYS2 UCRT GCC ccache",
+            "name": "ucrt-gcc-ccache",
             "hidden": true,
             "description": "MSYS2 GCC | Need ccache",
-            "inherits": "MSYS2 UCRT GCC",
+            "inherits": "ucrt-gcc",
             "cacheVariables": {
                 "CMAKE_CXX_COMPILER_LAUNCHER": "ccache",
                 "CMAKE_C_COMPILER_LAUNCHER": "ccache"
             }
         },
         {
-            "name": "MSYS2 UCRT GCC x64-debug ccache",
+            "name": "ucrt-gcc-x64-debug-ccache",
             "displayName": "UCRT GCC x64-Debug ccache",
             "description": "MSYS2 UCRT GCC | Need ccache",
-            "inherits": "MSYS2 UCRT GCC ccache",
+            "inherits": "ucrt-gcc-ccache",
             "architecture": {
                 "value": "x64",
                 "strategy": "external"
@@ -475,10 +475,10 @@
             }
         },
         {
-            "name": "MSYS2 UCRT GCC x64-release ccache",
+            "name": "ucrt-gcc-x64-release-ccache",
             "displayName": "UCRT GCC x64-Release ccache",
             "description": "MSYS2 UCRT GCC | Need ccache",
-            "inherits": "MSYS2 UCRT GCC ccache",
+            "inherits": "ucrt-gcc-ccache",
             "architecture": {
                 "value": "x64",
                 "strategy": "external"
@@ -488,10 +488,10 @@
             }
         },
         {
-            "name": "MSYS2 UCRT GCC x86-debug ccache",
+            "name": "ucrt-gcc-x86-debug-ccache",
             "displayName": "UCRT GCC x86-Debug ccache",
             "description": "MSYS2 UCRT GCC | Need ccache",
-            "inherits": "MSYS2 UCRT GCC ccache",
+            "inherits": "ucrt-gcc-ccache",
             "architecture": {
                 "value": "x86",
                 "strategy": "external"
@@ -501,10 +501,10 @@
             }
         },
         {
-            "name": "MSYS2 UCRT GCC x86-release ccache",
+            "name": "ucrt-gcc-x86-release-ccache",
             "displayName": "UCRT GCC x86-Release ccache",
             "description": "MSYS2 UCRT GCC | Need ccache",
-            "inherits": "MSYS2 UCRT GCC ccache",
+            "inherits": "ucrt-gcc-ccache",
             "architecture": {
                 "value": "x86",
                 "strategy": "external"
@@ -516,201 +516,201 @@
     ],
     "buildPresets": [
         {
-            "name": "UCRT Clang x64-debug",
+            "name": "ucrt-clang-x64-debug",
             "description": "MSYS2 UCRT Clang",
             "displayName": "UCRT Clang x64-debug",
-            "configurePreset": "MSYS2 UCRT Clang x64-debug"
+            "configurePreset": "ucrt-clang-x64-debug"
         },
         {
-            "name": "UCRT Clang x64-release",
+            "name": "ucrt-clang-x64-release",
             "description": "MSYS2 UCRT Clang",
             "displayName": "UCRT Clang x64-release",
-            "configurePreset": "MSYS2 UCRT Clang x64-release"
+            "configurePreset": "ucrt-clang-x64-release"
         },
         {
-            "name": "UCRT Clang x86-debug",
+            "name": "ucrt-clang-x86-debug",
             "description": "MSYS2 UCRT Clang",
             "displayName": "UCRT Clang x86-debug",
-            "configurePreset": "MSYS2 UCRT Clang x86-debug"
+            "configurePreset": "ucrt-clang-x86-debug"
         },
         {
-            "name": "UCRT Clang x86-release",
+            "name": "ucrt-clang-x86-release",
             "description": "MSYS2 UCRT Clang",
             "displayName": "UCRT Clang x86-release",
-            "configurePreset": "MSYS2 UCRT Clang x86-release"
+            "configurePreset": "ucrt-clang-x86-release"
         },
         {
-            "name": "UCRT Clang x64-debug sccache",
+            "name": "ucrt-clang-x64-debug-sccache",
             "description": "MSYS2 UCRT Clang | Need sccache",
             "displayName": "UCRT Clang x64-Debug sccache",
-            "configurePreset": "MSYS2 UCRT Clang x64-debug sccache"
+            "configurePreset": "ucrt-clang-x64-debug-sccache"
         },
         {
-            "name": "UCRT Clang x64-release sccache",
+            "name": "ucrt-clang-x64-release-sccache",
             "description": "MSYS2 UCRT Clang | Need sccache",
             "displayName": "UCRT Clang x64-Release sccache",
-            "configurePreset": "MSYS2 UCRT Clang x64-release sccache"
+            "configurePreset": "ucrt-clang-x64-release-sccache"
         },
         {
-            "name": "UCRT Clang x86-debug sccache",
+            "name": "ucrt-clang-x86-debug-sccache",
             "description": "MSYS2 UCRT Clang | Need sccache",
             "displayName": "UCRT Clang x86-Debug sccache",
-            "configurePreset": "MSYS2 UCRT Clang x86-debug sccache"
+            "configurePreset": "ucrt-clang-x86-debug-sccache"
         },
         {
-            "name": "UCRT Clang x86-release sccache",
+            "name": "ucrt-clang-x86-release-sccache",
             "description": "MSYS2 UCRT Clang | Need sccache",
             "displayName": "UCRT Clang x86-Release sccache",
-            "configurePreset": "MSYS2 UCRT Clang x86-release sccache"
+            "configurePreset": "ucrt-clang-x86-release-sccache"
         },
         {
-            "name": "UCRT Clang x64-debug ccache",
+            "name": "ucrt-clang-x64-debug-ccache",
             "description": "MSYS2 UCRT Clang | Need ccache",
             "displayName": "UCRT Clang x64-Debug ccache",
-            "configurePreset": "MSYS2 UCRT Clang x64-debug ccache"
+            "configurePreset": "ucrt-clang-x64-debug-ccache"
         },
         {
-            "name": "UCRT Clang x64-release ccache",
+            "name": "ucrt-clang-x64-release-ccache",
             "description": "MSYS2 UCRT Clang | Need ccache",
             "displayName": "UCRT Clang x64-Release ccache",
-            "configurePreset": "MSYS2 UCRT Clang x64-release ccache"
+            "configurePreset": "ucrt-clang-x64-release-ccache"
         },
         {
-            "name": "UCRT Clang x86-debug ccache",
+            "name": "ucrt-clang-x86-debug-ccache",
             "description": "MSYS2 UCRT Clang | Need ccache",
             "displayName": "UCRT Clang x86-Debug ccache",
-            "configurePreset": "MSYS2 UCRT Clang x86-debug ccache"
+            "configurePreset": "ucrt-clang-x86-debug-ccache"
         },
         {
-            "name": "UCRT Clang x86-release ccache",
+            "name": "ucrt-clang-x86-release-ccache",
             "description": "MSYS2 UCRT Clang | Need ccache",
             "displayName": "UCRT Clang x86-Release ccache",
-            "configurePreset": "MSYS2 UCRT Clang x86-release ccache"
+            "configurePreset": "ucrt-clang-x86-release-ccache"
         },
         {
-            "name": "MSVC x64-debug",
+            "name": "msvc-x64-debug",
             "description": "Visual Studio",
             "displayName": "MSVC x64-debug",
-            "configurePreset": "MSVC x64-debug"
+            "configurePreset": "msvc-x64-debug"
         },
         {
-            "name": "MSVC x64-release",
+            "name": "msvc-x64-release",
             "description": "Visual Studio",
             "displayName": "MSVC x64-release",
-            "configurePreset": "MSVC x64-release"
+            "configurePreset": "msvc-x64-release"
         },
         {
-            "name": "MSVC x86-debug",
+            "name": "msvc-x86-debug",
             "description": "Visual Studio",
             "displayName": "MSVC x86-debug",
-            "configurePreset": "MSVC x86-debug"
+            "configurePreset": "msvc-x86-debug"
         },
         {
-            "name": "MSVC x86-release",
+            "name": "msvc-x86-release",
             "description": "Visual Studio",
             "displayName": "MSVC x86-release",
-            "configurePreset": "MSVC x86-release"
+            "configurePreset": "msvc-x86-release"
         },
         {
-            "name": "MSVC x64-debug sccache",
+            "name": "msvc-x64-debug-sccache",
             "description": "Visual Studio | Need Sccache",
             "displayName": "MSVC x64-Debug sccache",
-            "configurePreset": "MSVC x64-debug sccache"
+            "configurePreset": "msvc-x64-debug-sccache"
         },
         {
-            "name": "MSVC x64-release sccache",
+            "name": "msvc-x64-release-sccache",
             "description": "Visual Studio | Need Sccache",
             "displayName": "MSVC x64-Release sccache",
-            "configurePreset": "MSVC x64-release sccache"
+            "configurePreset": "msvc-x64-release-sccache"
         },
         {
-            "name": "MSVC x86-debug sccache",
+            "name": "msvc-x86-debug-sccache",
             "description": "Visual Studio | Need Sccache",
             "displayName": "MSVC x86-Debug sccache",
-            "configurePreset": "MSVC x86-debug sccache"
+            "configurePreset": "msvc-x86-debug-sccache"
         },
         {
-            "name": "MSVC x86-release sccache",
+            "name": "msvc-x86-release-sccache",
             "description": "Visual Studio | Need Sccache",
             "displayName": "MSVC x86-Release sccache",
-            "configurePreset": "MSVC x86-release sccache"
+            "configurePreset": "msvc-x86-release-sccache"
         },
         {
-            "name": "UCRT GCC x64-debug",
+            "name": "ucrt-gcc-x64-debug",
             "description": "UCRT GCC",
             "displayName": "UCRT GCC x64-debug",
-            "configurePreset": "MSYS2 UCRT GCC x64-debug"
+            "configurePreset": "ucrt-gcc-x64-debug"
         },
         {
-            "name": "UCRT GCC x64-release",
+            "name": "ucrt-gcc-x64-release",
             "description": "UCRT GCC",
             "displayName": "UCRT GCC x64-release",
-            "configurePreset": "MSYS2 UCRT GCC x64-release"
+            "configurePreset": "ucrt-gcc-x64-release"
         },
         {
-            "name": "UCRT GCC x86-debug",
+            "name": "ucrt-gcc-x86-debug",
             "description": "UCRT GCC",
             "displayName": "UCRT GCC x86-debug",
-            "configurePreset": "MSYS2 UCRT GCC x86-debug"
+            "configurePreset": "ucrt-gcc-x86-debug"
         },
         {
-            "name": "UCRT GCC x86-release",
+            "name": "ucrt-gcc-x86-release",
             "description": "UCRT GCC",
             "displayName": "UCRT GCC x86-release",
-            "configurePreset": "MSYS2 UCRT GCC x86-release"
+            "configurePreset": "ucrt-gcc-x86-release"
         },
         {
-            "name": "UCRT GCC x64-debug sccache",
+            "name": "ucrt-gcc-x64-debug-sccache",
             "description": "MSYS2 UCRT GCC | Need sccache",
             "displayName": "UCRT GCC x64-Debug sccache",
-            "configurePreset": "MSYS2 UCRT GCC x64-debug sccache"
+            "configurePreset": "ucrt-gcc-x64-debug-sccache"
         },
         {
-            "name": "UCRT GCC x64-release sccache",
+            "name": "ucrt-gcc-x64-release-sccache",
             "description": "MSYS2 UCRT GCC | Need sccache",
             "displayName": "UCRT GCC x64-Release sccache",
-            "configurePreset": "MSYS2 UCRT GCC x64-release sccache"
+            "configurePreset": "ucrt-gcc-x64-release-sccache"
         },
         {
-            "name": "UCRT GCC x86-debug sccache",
+            "name": "ucrt-gcc-x86-debug-sccache",
             "description": "MSYS2 UCRT GCC | Need sccache",
             "displayName": "UCRT GCC x86-Debug sccache",
-            "configurePreset": "MSYS2 UCRT GCC x86-debug sccache"
+            "configurePreset": "ucrt-gcc-x86-debug-sccache"
         },
         {
-            "name": "UCRT GCC x86-release sccache",
+            "name": "ucrt-gcc-x86-release-sccache",
             "description": "MSYS2 UCRT GCC | Need sccache",
             "displayName": "UCRT GCC x86-Release sccache",
-            "configurePreset": "MSYS2 UCRT GCC x86-release sccache"
+            "configurePreset": "ucrt-gcc-x86-release-sccache"
         },
         {
-            "name": "UCRT GCC x64-debug ccache",
+            "name": "ucrt-gcc-x64-debug-ccache",
             "description": "MSYS2 UCRT GCC | Need ccache",
             "displayName": "UCRT GCC x64-Debug ccache",
-            "configurePreset": "MSYS2 UCRT GCC x64-debug ccache"
+            "configurePreset": "ucrt-gcc-x64-debug-ccache"
         },
         {
-            "name": "UCRT GCC x64-release ccache",
+            "name": "ucrt-gcc-x64-release-ccache",
             "description": "MSYS2 UCRT GCC | Need ccache",
             "displayName": "UCRT GCC x64-Release ccache",
-            "configurePreset": "MSYS2 UCRT GCC x64-release ccache"
+            "configurePreset": "ucrt-gcc-x64-release-ccache"
         },
         {
-            "name": "UCRT GCC x86-debug ccache",
+            "name": "ucrt-gcc-x86-debug-ccache",
             "description": "MSYS2 UCRT GCC | Need ccache",
             "displayName": "UCRT GCC x86-Debug ccache",
-            "configurePreset": "MSYS2 UCRT GCC x86-debug ccache"
+            "configurePreset": "ucrt-gcc-x86-debug-ccache"
         },
         {
-            "name": "UCRT GCC x86-release ccache",
+            "name": "ucrt-gcc-x86-release-ccache",
             "description": "MSYS2 UCRT GCC | Need ccache",
             "displayName": "UCRT GCC x86-Release ccache",
-            "configurePreset": "MSYS2 UCRT GCC x86-release ccache"
+            "configurePreset": "ucrt-gcc-x86-release-ccache"
         }
     ],
     "testPresets": [
         {
-            "name": "CTest Base",
+            "name": "ctest-base",
             "hidden": true,
             "output": {
                 "outputOnFailure": true
@@ -722,772 +722,772 @@
             }
         },
         {
-            "name": "UCRT Clang x64-debug ctest",
-            "configurePreset": "MSYS2 UCRT Clang x64-debug",
-            "inherits": "CTest Base"
+            "name": "ucrt-clang-x64-debug-ctest",
+            "configurePreset": "ucrt-clang-x64-debug",
+            "inherits": "ctest-base"
         },
         {
-            "name": "UCRT Clang x64-release ctest",
-            "configurePreset": "MSYS2 UCRT Clang x64-release",
-            "inherits": "CTest Base"
+            "name": "ucrt-clang-x64-release-ctest",
+            "configurePreset": "ucrt-clang-x64-release",
+            "inherits": "ctest-base"
         },
         {
-            "name": "UCRT Clang x86-debug ctest",
-            "configurePreset": "MSYS2 UCRT Clang x86-debug",
-            "inherits": "CTest Base"
+            "name": "ucrt-clang-x86-debug-ctest",
+            "configurePreset": "ucrt-clang-x86-debug",
+            "inherits": "ctest-base"
         },
         {
-            "name": "UCRT Clang x86-release ctest",
-            "configurePreset": "MSYS2 UCRT Clang x86-release",
-            "inherits": "CTest Base"
+            "name": "ucrt-clang-x86-release-ctest",
+            "configurePreset": "ucrt-clang-x86-release",
+            "inherits": "ctest-base"
         },
         {
-            "name": "UCRT Clang x64-debug sccache ctest",
-            "configurePreset": "MSYS2 UCRT Clang x64-debug sccache",
-            "inherits": "CTest Base"
+            "name": "ucrt-clang-x64-debug-sccache-ctest",
+            "configurePreset": "ucrt-clang-x64-debug-sccache",
+            "inherits": "ctest-base"
         },
         {
-            "name": "UCRT Clang x64-release sccache ctest",
-            "configurePreset": "MSYS2 UCRT Clang x64-release sccache",
-            "inherits": "CTest Base"
+            "name": "ucrt-clang-x64-release-sccache-ctest",
+            "configurePreset": "ucrt-clang-x64-release-sccache",
+            "inherits": "ctest-base"
         },
         {
-            "name": "UCRT Clang x86-debug sccache ctest",
-            "configurePreset": "MSYS2 UCRT Clang x86-debug sccache",
-            "inherits": "CTest Base"
+            "name": "ucrt-clang-x86-debug-sccache-ctest",
+            "configurePreset": "ucrt-clang-x86-debug-sccache",
+            "inherits": "ctest-base"
         },
         {
-            "name": "UCRT Clang x86-release sccache ctest",
-            "configurePreset": "MSYS2 UCRT Clang x86-release sccache",
-            "inherits": "CTest Base"
+            "name": "ucrt-clang-x86-release-sccache-ctest",
+            "configurePreset": "ucrt-clang-x86-release-sccache",
+            "inherits": "ctest-base"
         },
         {
-            "name": "UCRT Clang x64-debug ccache ctest",
-            "configurePreset": "MSYS2 UCRT Clang x64-debug ccache",
-            "inherits": "CTest Base"
+            "name": "ucrt-clang-x64-debug-ccache-ctest",
+            "configurePreset": "ucrt-clang-x64-debug-ccache",
+            "inherits": "ctest-base"
         },
         {
-            "name": "UCRT Clang x64-release ccache ctest",
-            "configurePreset": "MSYS2 UCRT Clang x64-release ccache",
-            "inherits": "CTest Base"
+            "name": "ucrt-clang-x64-release-ccache-ctest",
+            "configurePreset": "ucrt-clang-x64-release-ccache",
+            "inherits": "ctest-base"
         },
         {
-            "name": "UCRT Clang x86-debug ccache ctest",
-            "configurePreset": "MSYS2 UCRT Clang x86-debug ccache",
-            "inherits": "CTest Base"
+            "name": "ucrt-clang-x86-debug-ccache-ctest",
+            "configurePreset": "ucrt-clang-x86-debug-ccache",
+            "inherits": "ctest-base"
         },
         {
-            "name": "UCRT Clang x86-release ccache ctest",
-            "configurePreset": "MSYS2 UCRT Clang x86-release ccache",
-            "inherits": "CTest Base"
+            "name": "ucrt-clang-x86-release-ccache-ctest",
+            "configurePreset": "ucrt-clang-x86-release-ccache",
+            "inherits": "ctest-base"
         },
         {
-            "name": "MSVC x64-debug ctest",
-            "configurePreset": "MSVC x64-debug",
-            "inherits": "CTest Base"
+            "name": "msvc-x64-debug-ctest",
+            "configurePreset": "msvc-x64-debug",
+            "inherits": "ctest-base"
         },
         {
-            "name": "MSVC x64-release ctest",
-            "configurePreset": "MSVC x64-release",
-            "inherits": "CTest Base"
+            "name": "msvc-x64-release-ctest",
+            "configurePreset": "msvc-x64-release",
+            "inherits": "ctest-base"
         },
         {
-            "name": "MSVC x86-debug ctest",
-            "configurePreset": "MSVC x86-debug",
-            "inherits": "CTest Base"
+            "name": "msvc-x86-debug-ctest",
+            "configurePreset": "msvc-x86-debug",
+            "inherits": "ctest-base"
         },
         {
-            "name": "MSVC x86-release ctest",
-            "configurePreset": "MSVC x86-release",
-            "inherits": "CTest Base"
+            "name": "msvc-x86-release-ctest",
+            "configurePreset": "msvc-x86-release",
+            "inherits": "ctest-base"
         },
         {
-            "name": "MSVC x64-debug sccache ctest",
-            "configurePreset": "MSVC x64-debug sccache",
-            "inherits": "CTest Base"
+            "name": "msvc-x64-debug-sccache-ctest",
+            "configurePreset": "msvc-x64-debug-sccache",
+            "inherits": "ctest-base"
         },
         {
-            "name": "MSVC x64-release sccache ctest",
-            "configurePreset": "MSVC x64-release sccache",
-            "inherits": "CTest Base"
+            "name": "msvc-x64-release-sccache-ctest",
+            "configurePreset": "msvc-x64-release-sccache",
+            "inherits": "ctest-base"
         },
         {
-            "name": "MSVC x86-debug sccache ctest",
-            "configurePreset": "MSVC x86-debug sccache",
-            "inherits": "CTest Base"
+            "name": "msvc-x86-debug-sccache-ctest",
+            "configurePreset": "msvc-x86-debug-sccache",
+            "inherits": "ctest-base"
         },
         {
-            "name": "MSVC x86-release sccache ctest",
-            "configurePreset": "MSVC x86-release sccache",
-            "inherits": "CTest Base"
+            "name": "msvc-x86-release-sccache-ctest",
+            "configurePreset": "msvc-x86-release-sccache",
+            "inherits": "ctest-base"
         },
         {
-            "name": "UCRT GCC x64-debug ctest",
-            "configurePreset": "MSYS2 UCRT GCC x64-debug",
-            "inherits": "CTest Base"
+            "name": "ucrt-gcc-x64-debug-ctest",
+            "configurePreset": "ucrt-gcc-x64-debug",
+            "inherits": "ctest-base"
         },
         {
-            "name": "UCRT GCC x64-release ctest",
-            "configurePreset": "MSYS2 UCRT GCC x64-release",
-            "inherits": "CTest Base"
+            "name": "ucrt-gcc-x64-release-ctest",
+            "configurePreset": "ucrt-gcc-x64-release",
+            "inherits": "ctest-base"
         },
         {
-            "name": "UCRT GCC x86-debug ctest",
-            "configurePreset": "MSYS2 UCRT GCC x86-debug",
-            "inherits": "CTest Base"
+            "name": "ucrt-gcc-x86-debug-ctest",
+            "configurePreset": "ucrt-gcc-x86-debug",
+            "inherits": "ctest-base"
         },
         {
-            "name": "UCRT GCC x86-release ctest",
-            "configurePreset": "MSYS2 UCRT GCC x86-release",
-            "inherits": "CTest Base"
+            "name": "ucrt-gcc-x86-release-ctest",
+            "configurePreset": "ucrt-gcc-x86-release",
+            "inherits": "ctest-base"
         },
         {
-            "name": "UCRT GCC x64-debug sccache ctest",
-            "configurePreset": "MSYS2 UCRT GCC x64-debug sccache",
-            "inherits": "CTest Base"
+            "name": "ucrt-gcc-x64-debug-sccache-ctest",
+            "configurePreset": "ucrt-gcc-x64-debug-sccache",
+            "inherits": "ctest-base"
         },
         {
-            "name": "UCRT GCC x64-release sccache ctest",
-            "configurePreset": "MSYS2 UCRT GCC x64-release sccache",
-            "inherits": "CTest Base"
+            "name": "ucrt-gcc-x64-release-sccache-ctest",
+            "configurePreset": "ucrt-gcc-x64-release-sccache",
+            "inherits": "ctest-base"
         },
         {
-            "name": "UCRT GCC x86-debug sccache ctest",
-            "configurePreset": "MSYS2 UCRT GCC x86-debug sccache",
-            "inherits": "CTest Base"
+            "name": "ucrt-gcc-x86-debug-sccache-ctest",
+            "configurePreset": "ucrt-gcc-x86-debug-sccache",
+            "inherits": "ctest-base"
         },
         {
-            "name": "UCRT GCC x86-release sccache ctest",
-            "configurePreset": "MSYS2 UCRT GCC x86-release sccache",
-            "inherits": "CTest Base"
+            "name": "ucrt-gcc-x86-release-sccache-ctest",
+            "configurePreset": "ucrt-gcc-x86-release-sccache",
+            "inherits": "ctest-base"
         },
         {
-            "name": "UCRT GCC x64-debug ccache ctest",
-            "configurePreset": "MSYS2 UCRT GCC x64-debug ccache",
-            "inherits": "CTest Base"
+            "name": "ucrt-gcc-x64-debug-ccache-ctest",
+            "configurePreset": "ucrt-gcc-x64-debug-ccache",
+            "inherits": "ctest-base"
         },
         {
-            "name": "UCRT GCC x64-release ccache ctest",
-            "configurePreset": "MSYS2 UCRT GCC x64-release ccache",
-            "inherits": "CTest Base"
+            "name": "ucrt-gcc-x64-release-ccache-ctest",
+            "configurePreset": "ucrt-gcc-x64-release-ccache",
+            "inherits": "ctest-base"
         },
         {
-            "name": "UCRT GCC x86-debug ccache ctest",
-            "configurePreset": "MSYS2 UCRT GCC x86-debug ccache",
-            "inherits": "CTest Base"
+            "name": "ucrt-gcc-x86-debug-ccache-ctest",
+            "configurePreset": "ucrt-gcc-x86-debug-ccache",
+            "inherits": "ctest-base"
         },
         {
-            "name": "UCRT GCC x86-release ccache ctest",
-            "configurePreset": "MSYS2 UCRT GCC x86-release ccache",
-            "inherits": "CTest Base"
+            "name": "ucrt-gcc-x86-release-ccache-ctest",
+            "configurePreset": "ucrt-gcc-x86-release-ccache",
+            "inherits": "ctest-base"
         }
     ],
     "workflowPresets": [
         {
-            "name": "MSVC x64-Release",
+            "name": "workflow-msvc-x64-release",
             "description": "Visual Studio",
             "displayName": "MSVC x64-Release",
             "steps": [
                 {
                     "type": "configure",
-                    "name": "MSVC x64-release"
+                    "name": "msvc-x64-release"
                 },
                 {
                     "type": "build",
-                    "name": "MSVC x64-release"
+                    "name": "msvc-x64-release"
                 },
                 {
                     "type": "test",
-                    "name": "MSVC x64-release ctest"
+                    "name": "msvc-x64-release-ctest"
                 }
             ]
         },
         {
-            "name": "MSVC x64-Debug",
+            "name": "workflow-msvc-x64-debug",
             "description": "Visual Studio",
             "displayName": "MSVC x64-Debug",
             "steps": [
                 {
                     "type": "configure",
-                    "name": "MSVC x64-debug"
+                    "name": "msvc-x64-debug"
                 },
                 {
                     "type": "build",
-                    "name": "MSVC x64-debug"
+                    "name": "msvc-x64-debug"
                 },
                 {
                     "type": "test",
-                    "name": "MSVC x64-debug ctest"
+                    "name": "msvc-x64-debug-ctest"
                 }
             ]
         },
         {
-            "name": "MSVC x86 Debug",
+            "name": "workflow-msvc-x86-debug",
             "description": "Visual Studio",
             "displayName": "MSVC x86 Debug",
             "steps": [
                 {
                     "type": "configure",
-                    "name": "MSVC x86-debug"
+                    "name": "msvc-x86-debug"
                 },
                 {
                     "type": "build",
-                    "name": "MSVC x86-debug"
+                    "name": "msvc-x86-debug"
                 },
                 {
                     "type": "test",
-                    "name": "MSVC x86-debug ctest"
+                    "name": "msvc-x86-debug-ctest"
                 }
             ]
         },
         {
-            "name": "MSVC x86 Release",
+            "name": "workflow-msvc-x86-release",
             "description": "Visual Studio",
             "displayName": "MSVC x86 Release",
             "steps": [
                 {
                     "type": "configure",
-                    "name": "MSVC x86-release"
+                    "name": "msvc-x86-release"
                 },
                 {
                     "type": "build",
-                    "name": "MSVC x86-release"
+                    "name": "msvc-x86-release"
                 },
                 {
                     "type": "test",
-                    "name": "MSVC x86-release ctest"
+                    "name": "msvc-x86-release-ctest"
                 }
             ]
         },
         {
-            "name": "MSVC x64-Debug sccache",
+            "name": "workflow-msvc-x64-debug-sccache",
             "description": "Visual Studio | Need Sccache",
             "displayName": "MSVC x64-Debug sccache",
             "steps": [
                 {
                     "type": "configure",
-                    "name": "MSVC x64-debug sccache"
+                    "name": "msvc-x64-debug-sccache"
                 },
                 {
                     "type": "build",
-                    "name": "MSVC x64-debug sccache"
+                    "name": "msvc-x64-debug-sccache"
                 },
                 {
                     "type": "test",
-                    "name": "MSVC x64-debug sccache ctest"
+                    "name": "msvc-x64-debug-sccache-ctest"
                 }
             ]
         },
         {
-            "name": "MSVC x64-Release sccache",
+            "name": "workflow-msvc-x64-release-sccache",
             "description": "Visual Studio | Need Sccache",
             "displayName": "MSVC x64-Release sccache",
             "steps": [
                 {
                     "type": "configure",
-                    "name": "MSVC x64-release sccache"
+                    "name": "msvc-x64-release-sccache"
                 },
                 {
                     "type": "build",
-                    "name": "MSVC x64-release sccache"
+                    "name": "msvc-x64-release-sccache"
                 },
                 {
                     "type": "test",
-                    "name": "MSVC x64-release sccache ctest"
+                    "name": "msvc-x64-release-sccache-ctest"
                 }
             ]
         },
         {
-            "name": "MSVC x86 Debug sccache",
+            "name": "workflow-msvc-x86-debug-sccache",
             "description": "Visual Studio | Need Sccache",
             "displayName": "MSVC x86 Debug sccache",
             "steps": [
                 {
                     "type": "configure",
-                    "name": "MSVC x86-debug sccache"
+                    "name": "msvc-x86-debug-sccache"
                 },
                 {
                     "type": "build",
-                    "name": "MSVC x86-debug sccache"
+                    "name": "msvc-x86-debug-sccache"
                 },
                 {
                     "type": "test",
-                    "name": "MSVC x86-debug sccache ctest"
+                    "name": "msvc-x86-debug-sccache-ctest"
                 }
             ]
         },
         {
-            "name": "MSVC x86 Release sccache",
+            "name": "workflow-msvc-x86-release-sccache",
             "description": "Visual Studio | Need Sccache",
             "displayName": "MSVC x86 Release sccache",
             "steps": [
                 {
                     "type": "configure",
-                    "name": "MSVC x86-release sccache"
+                    "name": "msvc-x86-release-sccache"
                 },
                 {
                     "type": "build",
-                    "name": "MSVC x86-release sccache"
+                    "name": "msvc-x86-release-sccache"
                 },
                 {
                     "type": "test",
-                    "name": "MSVC x86-release sccache ctest"
+                    "name": "msvc-x86-release-sccache-ctest"
                 }
             ]
         },
         {
-            "name": "UCRT Clang x64-Debug",
+            "name": "workflow-ucrt-clang-x64-debug",
             "description": "MSYS2 UCRT Clang",
             "displayName": "UCRT Clang x64-Debug",
             "steps": [
                 {
                     "type": "configure",
-                    "name": "MSYS2 UCRT Clang x64-debug"
+                    "name": "ucrt-clang-x64-debug"
                 },
                 {
                     "type": "build",
-                    "name": "UCRT Clang x64-debug"
+                    "name": "ucrt-clang-x64-debug"
                 },
                 {
                     "type": "test",
-                    "name": "UCRT Clang x64-debug ctest"
+                    "name": "ucrt-clang-x64-debug-ctest"
                 }
             ]
         },
         {
-            "name": "UCRT Clang x64-Release",
+            "name": "workflow-ucrt-clang-x64-release",
             "description": "MSYS2 UCRT Clang",
             "displayName": "UCRT Clang x64-Release",
             "steps": [
                 {
                     "type": "configure",
-                    "name": "MSYS2 UCRT Clang x64-release"
+                    "name": "ucrt-clang-x64-release"
                 },
                 {
                     "type": "build",
-                    "name": "UCRT Clang x64-release"
+                    "name": "ucrt-clang-x64-release"
                 },
                 {
                     "type": "test",
-                    "name": "UCRT Clang x64-release ctest"
+                    "name": "ucrt-clang-x64-release-ctest"
                 }
             ]
         },
         {
-            "name": "UCRT Clang x86-Debug",
+            "name": "workflow-ucrt-clang-x86-debug",
             "description": "MSYS2 UCRT Clang",
             "displayName": "UCRT Clang x86-Debug",
             "steps": [
                 {
                     "type": "configure",
-                    "name": "MSYS2 UCRT Clang x86-debug"
+                    "name": "ucrt-clang-x86-debug"
                 },
                 {
                     "type": "build",
-                    "name": "UCRT Clang x86-debug"
+                    "name": "ucrt-clang-x86-debug"
                 },
                 {
                     "type": "test",
-                    "name": "UCRT Clang x86-debug ctest"
+                    "name": "ucrt-clang-x86-debug-ctest"
                 }
             ]
         },
         {
-            "name": "UCRT Clang x86-Release",
+            "name": "workflow-ucrt-clang-x86-release",
             "description": "MSYS2 UCRT Clang",
             "displayName": "UCRT Clang x86-Release",
             "steps": [
                 {
                     "type": "configure",
-                    "name": "MSYS2 UCRT Clang x86-release"
+                    "name": "ucrt-clang-x86-release"
                 },
                 {
                     "type": "build",
-                    "name": "UCRT Clang x86-release"
+                    "name": "ucrt-clang-x86-release"
                 },
                 {
                     "type": "test",
-                    "name": "UCRT Clang x86-release ctest"
+                    "name": "ucrt-clang-x86-release-ctest"
                 }
             ]
         },
         {
-            "name": "UCRT Clang x64-Debug sccache",
+            "name": "workflow-ucrt-clang-x64-debug-sccache",
             "description": "MSYS2 UCRT Clang | Need Sccache",
             "displayName": "UCRT Clang x64-Debug sccache",
             "steps": [
                 {
                     "type": "configure",
-                    "name": "MSYS2 UCRT Clang x64-debug sccache"
+                    "name": "ucrt-clang-x64-debug-sccache"
                 },
                 {
                     "type": "build",
-                    "name": "UCRT Clang x64-debug sccache"
+                    "name": "ucrt-clang-x64-debug-sccache"
                 },
                 {
                     "type": "test",
-                    "name": "UCRT Clang x64-debug sccache ctest"
+                    "name": "ucrt-clang-x64-debug-sccache-ctest"
                 }
             ]
         },
         {
-            "name": "UCRT Clang x64-Release sccache",
+            "name": "workflow-ucrt-clang-x64-release-sccache",
             "description": "MSYS2 UCRT Clang | Need Sccache",
             "displayName": "UCRT Clang x64-Release sccache",
             "steps": [
                 {
                     "type": "configure",
-                    "name": "MSYS2 UCRT Clang x64-release sccache"
+                    "name": "ucrt-clang-x64-release-sccache"
                 },
                 {
                     "type": "build",
-                    "name": "UCRT Clang x64-release sccache"
+                    "name": "ucrt-clang-x64-release-sccache"
                 },
                 {
                     "type": "test",
-                    "name": "UCRT Clang x64-release sccache ctest"
+                    "name": "ucrt-clang-x64-release-sccache-ctest"
                 }
             ]
         },
         {
-            "name": "UCRT Clang x86-Debug sccache",
+            "name": "workflow-ucrt-clang-x86-debug-sccache",
             "description": "MSYS2 UCRT Clang | Need Sccache",
             "displayName": "UCRT Clang x86-Debug sccache",
             "steps": [
                 {
                     "type": "configure",
-                    "name": "MSYS2 UCRT Clang x86-debug sccache"
+                    "name": "ucrt-clang-x86-debug-sccache"
                 },
                 {
                     "type": "build",
-                    "name": "UCRT Clang x86-debug sccache"
+                    "name": "ucrt-clang-x86-debug-sccache"
                 },
                 {
                     "type": "test",
-                    "name": "UCRT Clang x86-debug sccache ctest"
+                    "name": "ucrt-clang-x86-debug-sccache-ctest"
                 }
             ]
         },
         {
-            "name": "UCRT Clang x86-Release sccache",
+            "name": "workflow-ucrt-clang-x86-release-sccache",
             "description": "MSYS2 UCRT Clang | Need Sccache",
             "displayName": "UCRT Clang x86-Release sccache",
             "steps": [
                 {
                     "type": "configure",
-                    "name": "MSYS2 UCRT Clang x86-release sccache"
+                    "name": "ucrt-clang-x86-release-sccache"
                 },
                 {
                     "type": "build",
-                    "name": "UCRT Clang x86-release sccache"
+                    "name": "ucrt-clang-x86-release-sccache"
                 },
                 {
                     "type": "test",
-                    "name": "UCRT Clang x86-release sccache ctest"
+                    "name": "ucrt-clang-x86-release-sccache-ctest"
                 }
             ]
         },
         {
-            "name": "UCRT Clang x64-Debug ccache",
+            "name": "workflow-ucrt-clang-x64-debug-ccache",
             "description": "MSYS2 UCRT Clang | Need ccache",
             "displayName": "UCRT Clang x64-Debug ccache",
             "steps": [
                 {
                     "type": "configure",
-                    "name": "MSYS2 UCRT Clang x64-debug ccache"
+                    "name": "ucrt-clang-x64-debug-ccache"
                 },
                 {
                     "type": "build",
-                    "name": "UCRT Clang x64-debug ccache"
+                    "name": "ucrt-clang-x64-debug-ccache"
                 },
                 {
                     "type": "test",
-                    "name": "UCRT Clang x64-debug ccache ctest"
+                    "name": "ucrt-clang-x64-debug-ccache-ctest"
                 }
             ]
         },
         {
-            "name": "UCRT Clang x64-Release ccache",
+            "name": "workflow-ucrt-clang-x64-release-ccache",
             "description": "MSYS2 UCRT Clang | Need ccache",
             "displayName": "UCRT Clang x64-Release ccache",
             "steps": [
                 {
                     "type": "configure",
-                    "name": "MSYS2 UCRT Clang x64-release ccache"
+                    "name": "ucrt-clang-x64-release-ccache"
                 },
                 {
                     "type": "build",
-                    "name": "UCRT Clang x64-release ccache"
+                    "name": "ucrt-clang-x64-release-ccache"
                 },
                 {
                     "type": "test",
-                    "name": "UCRT Clang x64-release ccache ctest"
+                    "name": "ucrt-clang-x64-release-ccache-ctest"
                 }
             ]
         },
         {
-            "name": "UCRT Clang x86-Debug ccache",
+            "name": "workflow-ucrt-clang-x86-debug-ccache",
             "description": "MSYS2 UCRT Clang | Need ccache",
             "displayName": "UCRT Clang x86-Debug ccache",
             "steps": [
                 {
                     "type": "configure",
-                    "name": "MSYS2 UCRT Clang x86-debug ccache"
+                    "name": "ucrt-clang-x86-debug-ccache"
                 },
                 {
                     "type": "build",
-                    "name": "UCRT Clang x86-debug ccache"
+                    "name": "ucrt-clang-x86-debug-ccache"
                 },
                 {
                     "type": "test",
-                    "name": "UCRT Clang x86-debug ccache ctest"
+                    "name": "ucrt-clang-x86-debug-ccache-ctest"
                 }
             ]
         },
         {
-            "name": "UCRT Clang x86-Release ccache",
+            "name": "workflow-ucrt-clang-x86-release-ccache",
             "description": "MSYS2 UCRT Clang | Need ccache",
             "displayName": "UCRT Clang x86-Release ccache",
             "steps": [
                 {
                     "type": "configure",
-                    "name": "MSYS2 UCRT Clang x86-release ccache"
+                    "name": "ucrt-clang-x86-release-ccache"
                 },
                 {
                     "type": "build",
-                    "name": "UCRT Clang x86-release ccache"
+                    "name": "ucrt-clang-x86-release-ccache"
                 },
                 {
                     "type": "test",
-                    "name": "UCRT Clang x86-release ccache ctest"
+                    "name": "ucrt-clang-x86-release-ccache-ctest"
                 }
             ]
         },
         {
-            "name": "UCRT GCC x64-debug",
+            "name": "workflow-ucrt-gcc-x64-debug",
             "description": "MSYS2 UCRT GCC",
             "displayName": "UCRT GCC x64-debug",
             "steps": [
                 {
                     "type": "configure",
-                    "name": "MSYS2 UCRT GCC x64-debug"
+                    "name": "ucrt-gcc-x64-debug"
                 },
                 {
                     "type": "build",
-                    "name": "UCRT GCC x64-debug"
+                    "name": "ucrt-gcc-x64-debug"
                 },
                 {
                     "type": "test",
-                    "name": "UCRT GCC x64-debug ctest"
+                    "name": "ucrt-gcc-x64-debug-ctest"
                 }
             ]
         },
         {
-            "name": "UCRT GCC x64-release",
+            "name": "workflow-ucrt-gcc-x64-release",
             "description": "MSYS2 UCRT GCC",
             "displayName": "UCRT GCC x64-release",
             "steps": [
                 {
                     "type": "configure",
-                    "name": "MSYS2 UCRT GCC x64-release"
+                    "name": "ucrt-gcc-x64-release"
                 },
                 {
                     "type": "build",
-                    "name": "UCRT GCC x64-release"
+                    "name": "ucrt-gcc-x64-release"
                 },
                 {
                     "type": "test",
-                    "name": "UCRT GCC x64-release ctest"
+                    "name": "ucrt-gcc-x64-release-ctest"
                 }
             ]
         },
         {
-            "name": "UCRT GCC x86-debug",
+            "name": "workflow-ucrt-gcc-x86-debug",
             "description": "MSYS2 UCRT GCC",
             "displayName": "UCRT GCC x86-debug",
             "steps": [
                 {
                     "type": "configure",
-                    "name": "MSYS2 UCRT GCC x86-debug"
+                    "name": "ucrt-gcc-x86-debug"
                 },
                 {
                     "type": "build",
-                    "name": "UCRT GCC x86-debug"
+                    "name": "ucrt-gcc-x86-debug"
                 },
                 {
                     "type": "test",
-                    "name": "UCRT GCC x86-debug ctest"
+                    "name": "ucrt-gcc-x86-debug-ctest"
                 }
             ]
         },
         {
-            "name": "UCRT GCC x86-release",
+            "name": "workflow-ucrt-gcc-x86-release",
             "description": "MSYS2 UCRT GCC",
             "displayName": "UCRT GCC x86-release",
             "steps": [
                 {
                     "type": "configure",
-                    "name": "MSYS2 UCRT GCC x86-release"
+                    "name": "ucrt-gcc-x86-release"
                 },
                 {
                     "type": "build",
-                    "name": "UCRT GCC x86-release"
+                    "name": "ucrt-gcc-x86-release"
                 },
                 {
                     "type": "test",
-                    "name": "UCRT GCC x86-release ctest"
+                    "name": "ucrt-gcc-x86-release-ctest"
                 }
             ]
         },
         {
-            "name": "UCRT GCC x64-Debug sccache",
+            "name": "workflow-ucrt-gcc-x64-debug-sccache",
             "description": "MSYS2 UCRT GCC | Need Sccache",
             "displayName": "UCRT GCC x64-Debug sccache",
             "steps": [
                 {
                     "type": "configure",
-                    "name": "MSYS2 UCRT GCC x64-debug sccache"
+                    "name": "ucrt-gcc-x64-debug-sccache"
                 },
                 {
                     "type": "build",
-                    "name": "UCRT GCC x64-debug sccache"
+                    "name": "ucrt-gcc-x64-debug-sccache"
                 },
                 {
                     "type": "test",
-                    "name": "UCRT GCC x64-debug sccache ctest"
+                    "name": "ucrt-gcc-x64-debug-sccache-ctest"
                 }
             ]
         },
         {
-            "name": "UCRT GCC x64-Release sccache",
+            "name": "workflow-ucrt-gcc-x64-release-sccache",
             "description": "MSYS2 UCRT GCC | Need Sccache",
             "displayName": "UCRT GCC x64-Release sccache",
             "steps": [
                 {
                     "type": "configure",
-                    "name": "MSYS2 UCRT GCC x64-release sccache"
+                    "name": "ucrt-gcc-x64-release-sccache"
                 },
                 {
                     "type": "build",
-                    "name": "UCRT GCC x64-release sccache"
+                    "name": "ucrt-gcc-x64-release-sccache"
                 },
                 {
                     "type": "test",
-                    "name": "UCRT GCC x64-release sccache ctest"
+                    "name": "ucrt-gcc-x64-release-sccache-ctest"
                 }
             ]
         },
         {
-            "name": "UCRT GCC x86-Debug sccache",
+            "name": "workflow-ucrt-gcc-x86-debug-sccache",
             "description": "MSYS2 UCRT GCC | Need Sccache",
             "displayName": "UCRT GCC x86-Debug sccache",
             "steps": [
                 {
                     "type": "configure",
-                    "name": "MSYS2 UCRT GCC x86-debug sccache"
+                    "name": "ucrt-gcc-x86-debug-sccache"
                 },
                 {
                     "type": "build",
-                    "name": "UCRT GCC x86-debug sccache"
+                    "name": "ucrt-gcc-x86-debug-sccache"
                 },
                 {
                     "type": "test",
-                    "name": "UCRT GCC x86-debug sccache ctest"
+                    "name": "ucrt-gcc-x86-debug-sccache-ctest"
                 }
             ]
         },
         {
-            "name": "UCRT GCC x86-Release sccache",
+            "name": "workflow-ucrt-gcc-x86-release-sccache",
             "description": "MSYS2 UCRT GCC | Need Sccache",
             "displayName": "UCRT GCC x86-Release sccache",
             "steps": [
                 {
                     "type": "configure",
-                    "name": "MSYS2 UCRT GCC x86-release sccache"
+                    "name": "ucrt-gcc-x86-release-sccache"
                 },
                 {
                     "type": "build",
-                    "name": "UCRT GCC x86-release sccache"
+                    "name": "ucrt-gcc-x86-release-sccache"
                 },
                 {
                     "type": "test",
-                    "name": "UCRT GCC x86-release sccache ctest"
+                    "name": "ucrt-gcc-x86-release-sccache-ctest"
                 }
             ]
         },
         {
-            "name": "UCRT GCC x64-Debug ccache",
+            "name": "workflow-ucrt-gcc-x64-debug-ccache",
             "description": "MSYS2 UCRT GCC | Need ccache",
             "displayName": "UCRT GCC x64-Debug ccache",
             "steps": [
                 {
                     "type": "configure",
-                    "name": "MSYS2 UCRT GCC x64-debug ccache"
+                    "name": "ucrt-gcc-x64-debug-ccache"
                 },
                 {
                     "type": "build",
-                    "name": "UCRT GCC x64-debug ccache"
+                    "name": "ucrt-gcc-x64-debug-ccache"
                 },
                 {
                     "type": "test",
-                    "name": "UCRT GCC x64-debug ccache ctest"
+                    "name": "ucrt-gcc-x64-debug-ccache-ctest"
                 }
             ]
         },
         {
-            "name": "UCRT GCC x64-Release ccache",
+            "name": "workflow-ucrt-gcc-x64-release-ccache",
             "description": "MSYS2 UCRT GCC | Need ccache",
             "displayName": "UCRT GCC x64-Release ccache",
             "steps": [
                 {
                     "type": "configure",
-                    "name": "MSYS2 UCRT GCC x64-release ccache"
+                    "name": "ucrt-gcc-x64-release-ccache"
                 },
                 {
                     "type": "build",
-                    "name": "UCRT GCC x64-release ccache"
+                    "name": "ucrt-gcc-x64-release-ccache"
                 },
                 {
                     "type": "test",
-                    "name": "UCRT GCC x64-release ccache ctest"
+                    "name": "ucrt-gcc-x64-release-ccache-ctest"
                 }
             ]
         },
         {
-            "name": "UCRT GCC x86-Debug ccache",
+            "name": "workflow-ucrt-gcc-x86-debug-ccache",
             "description": "MSYS2 UCRT GCC | Need ccache",
             "displayName": "UCRT GCC x86-Debug ccache",
             "steps": [
                 {
                     "type": "configure",
-                    "name": "MSYS2 UCRT GCC x86-debug ccache"
+                    "name": "ucrt-gcc-x86-debug-ccache"
                 },
                 {
                     "type": "build",
-                    "name": "UCRT GCC x86-debug ccache"
+                    "name": "ucrt-gcc-x86-debug-ccache"
                 },
                 {
                     "type": "test",
-                    "name": "UCRT GCC x86-debug ccache ctest"
+                    "name": "ucrt-gcc-x86-debug-ccache-ctest"
                 }
             ]
         },
         {
-            "name": "UCRT GCC x86-Release ccache",
+            "name": "workflow-ucrt-gcc-x86-release-ccache",
             "description": "MSYS2 UCRT GCC | Need ccache",
             "displayName": "UCRT GCC x86-Release ccache",
             "steps": [
                 {
                     "type": "configure",
-                    "name": "MSYS2 UCRT GCC x86-release ccache"
+                    "name": "ucrt-gcc-x86-release-ccache"
                 },
                 {
                     "type": "build",
-                    "name": "UCRT GCC x86-release ccache"
+                    "name": "ucrt-gcc-x86-release-ccache"
                 },
                 {
                     "type": "test",
-                    "name": "UCRT GCC x86-release ccache ctest"
+                    "name": "ucrt-gcc-x86-release-ccache-ctest"
                 }
             ]
         }

@@ -55,6 +55,23 @@ endif()
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+# Every configure preset owns build/<preset slug>, so several configurations can
+# be built at the same time.  Keep one stable database at
+# build/compile_commands.json for clangd (.clangd: CompilationDatabase: build/)
+# so the editor follows the configuration that was built most recently without
+# hard-coding a preset name.  Only a direct child of build/ updates the entry
+# point; the PGO bootstrap sub-build must not overwrite it.
+get_filename_component(_coucurrent_build_parent "${CMAKE_BINARY_DIR}" DIRECTORY)
+if(CMAKE_EXPORT_COMPILE_COMMANDS
+   AND _coucurrent_build_parent STREQUAL "${CMAKE_SOURCE_DIR}/build")
+    add_custom_target(compile_commands_entrypoint ALL
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "${CMAKE_BINARY_DIR}/compile_commands.json"
+            "${CMAKE_SOURCE_DIR}/build/compile_commands.json"
+        COMMENT "Updating build/compile_commands.json (clangd entry point)"
+        VERBATIM)
+endif()
+
 # PGO is supported for Clang, MSVC and GCC.  GCC uses its .gcda profile
 # mechanism and does not need lld; keep LTO disabled for GCC by default.
 if(MSVC OR CMAKE_CXX_COMPILER_ID MATCHES "Clang"
@@ -292,6 +309,10 @@ if(BUILD_TESTING)
 
 
     include(GoogleTest)
+    # cmake/runtime-dlls.cmake copies the DLLs with a POST_BUILD command that is
+    # registered at the end of this directory, so discovering tests at ctest
+    # time avoids running ConcurrentTests before its DLLs are in place.
+    set(CMAKE_GTEST_DISCOVER_TESTS_DISCOVERY_MODE PRE_TEST)
     if(NOT MSVC)
         # System benchmark/gtest/absl are DLLs on MSYS2.  Put the compiler's
         # runtime directory first so ctest works from any shell, not only from

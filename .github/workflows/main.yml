@@ -70,7 +70,7 @@ jobs:
       - name: Configure
         run: >
           cmake --fresh
-          --preset "MSVC ${{ matrix.preset }}"
+          --preset "msvc-${{ matrix.preset }}"
           -DPGO=OFF
           -DPGO_MODE=OFF
           -DUSE_SYSTEM_DEPS=OFF
@@ -79,13 +79,13 @@ jobs:
       - name: Build
         run: >
           cmake --build
-          --preset "MSVC ${{ matrix.preset }}"
+          --preset "msvc-${{ matrix.preset }}"
           --parallel
 
       - name: Test
         run: >
           ctest
-          --preset "MSVC ${{ matrix.preset }} ctest"
+          --preset "msvc-${{ matrix.preset }}-ctest"
           --parallel
 
   msys2:
@@ -98,18 +98,22 @@ jobs:
       matrix:
         include:
           - compiler: Clang
+            slug: clang
             config: Debug
             preset: x64-debug
             compiler_package: clang:p
           - compiler: Clang
+            slug: clang
             config: Release
             preset: x64-release
             compiler_package: clang:p
           - compiler: GCC
+            slug: gcc
             config: Debug
             preset: x64-debug
             compiler_package: ''
           - compiler: GCC
+            slug: gcc
             config: Release
             preset: x64-release
             compiler_package: ''
@@ -143,7 +147,7 @@ jobs:
         shell: msys2 {0}
         run: >
           cmake --fresh
-          --preset "MSYS2 UCRT ${{ matrix.compiler }} ${{ matrix.preset }}"
+          --preset "ucrt-${{ matrix.slug }}-${{ matrix.preset }}"
           -DPGO_MODE=OFF
           -DPGO=OFF
           -DUSE_SYSTEM_DEPS=ON
@@ -153,12 +157,12 @@ jobs:
         shell: msys2 {0}
         run: >
           cmake --build
-          --preset "UCRT ${{ matrix.compiler }} ${{ matrix.preset }}"
+          --preset "ucrt-${{ matrix.slug }}-${{ matrix.preset }}"
           --parallel
 
       - name: Test
         shell: msys2 {0}
         run: >
           ctest
-          --preset "UCRT ${{ matrix.compiler }} ${{ matrix.preset }} ctest"
+          --preset "ucrt-${{ matrix.slug }}-${{ matrix.preset }}-ctest"
           --parallel

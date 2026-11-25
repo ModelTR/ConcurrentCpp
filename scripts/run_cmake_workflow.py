@@ -1,12 +1,15 @@
 #!/usr/bin/env python3
 """Verify every CMake configure preset with its build and test presets.
 
-All presets in this project share ``${sourceDir}/build`` as their binary
-directory, so they cannot be configured one after another in place.  This
-script loads the preset files, flattens preset inheritance into a derived
-presets file whose ``binaryDir``/``installDir`` point at an isolated directory
-per preset, and then runs the *real* presets through ``--presets-file``:
+Each configure preset owns an isolated build tree.  This script loads the
+preset files, flattens preset inheritance into a derived presets file whose
+``binaryDir``/``installDir`` point under ``--binary-root``, and then runs the
+*real* presets through ``--presets-file``.  Presets run in parallel
+(``--concurrency``); when a configure preset has a workflow preset, the whole
+configure/build/test sequence runs as a single ``cmake --workflow``
+invocation, otherwise the stages run as separate commands:
 
+    cmake --workflow --preset <workflow> --presets-file <derived>
     cmake --preset <configure> --presets-file <derived>
     cmake --build --preset <build> --presets-file <derived>
     ctest --preset <test> --presets-file <derived>
@@ -19,7 +22,7 @@ tests that silently pass when none are discovered, ...).
 Examples:
     python scripts/verify_cmake_presets.py --list
     python scripts/verify_cmake_presets.py --check-only
-    python scripts/verify_cmake_presets.py --presets "MSVC x64-debug"
+    python scripts/verify_cmake_presets.py --presets "msvc-x64-debug"
     python scripts/verify_cmake_presets.py --presets "*release*" --stages configure,build
     python scripts/verify_cmake_presets.py --dry-run
 
@@ -47,6 +50,7 @@ import tempfile
 import threading
 import time
 from collections import OrderedDict, defaultdict, deque
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime
 from functools import partial
@@ -60,7 +64,8 @@ if TYPE_CHECKING:
 REPO_ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_PRESETS_FILE = REPO_ROOT / "CMakePresets.json"
 DEFAULT_BINARY_ROOT = REPO_ROOT / "build" / "preset-verify"
-FAMILIES = ("configurePresets", "buildPresets", "testPresets")
+FAMILIES = ("configurePresets", "buildPresets", "testPresets", "workflowPresets")
+WORKFLOW_FAMILY = "workflowPresets"
 STAGE_ORDER = ("configure", "build", "test")
 MIN_PRESET_VERSION = 2
 CONFIGURE_FAMILY = "configurePresets"
@@ -69,6 +74,9 @@ TEST_FAMILY = "testPresets"
 MACRO_RE = re.compile(r"\$\{(sourceDir|sourceParentDir|fileDir|hostSystemName)\}")
 COMPILER_VARIABLES = ("CMAKE_C_COMPILER", "CMAKE_CXX_COMPILER")
 LAUNCHER_VARIABLES = ("CMAKE_C_COMPILER_LAUNCHER", "CMAKE_CXX_COMPILER_LAUNCHER")
+WORKFLOW_STEP_RE = re.compile(
+    r'Executing workflow step \d+ of \d+: (configure|build|test) preset "([^"]+)"',
+)
 
 type JsonScalar = str | int | float | bool | None
 type JsonValue = JsonScalar | list[JsonValue] | dict[str, JsonValue]
@@ -212,6 +220,25 @@ def status_text(status: str, style: Style) -> str:
     return style(f"{label:<7}", colour)
 
 
+_PRINT_LOCK = threading.Lock()
+_OUTPUT = threading.local()
+
+
+def _set_output_prefix(prefix: str) -> None:
+    """Set the prefix prepended to every line printed by this thread."""
+    _OUTPUT.prefix = prefix
+
+
+def _emit(text: str = "", *, end: str = "\n") -> None:
+    """Print one line atomically so concurrent presets do not interleave."""
+    prefix = getattr(_OUTPUT, "prefix", "")
+    with _PRINT_LOCK:
+        if prefix and text:
+            print(f"{prefix}{text}", end=end, flush=True)
+        else:
+            print(text, end=end, flush=True)
+
+
 # --------------------------------------------------------------------------
 # Data model
 # --------------------------------------------------------------------------
@@ -250,7 +277,8 @@ class Plan:
     env: dict[str, str]
     notes: list[str]
     skip_reason: str | None
-    issues: list[Issue] = field(default_factory=list)
+    workflow: str | None = None
+    issues: list[Issue] = field(default_factory=list[Issue])
 
     @property
     def has_static_error(self) -> bool:
@@ -276,7 +304,7 @@ class PlanResult:
     """Aggregate result for one configure preset."""
 
     plan: Plan
-    stages: list[StageResult] = field(default_factory=list)
+    stages: list[StageResult] = field(default_factory=list[StageResult])
 
     @property
     def status(self) -> str:
@@ -350,8 +378,10 @@ class RunOptions:
     excludes: tuple[str, ...]
     stages: tuple[str, ...]
     jobs: int | None
+    concurrency: int
     timeout: float
     clean: bool
+    clean_after: bool
     fail_fast: bool
     verbose: bool
     cmake_bin: str
@@ -373,6 +403,7 @@ class AnalysisContext:
     effective: dict[tuple[str, str], JsonObject]
     build_map: dict[str, list[str]]
     test_map: dict[str, list[str]]
+    workflow_map: dict[str, str]
 
 
 @dataclass(frozen=True)
@@ -1050,6 +1081,45 @@ def _build_mappings(
     return build_map, test_map, issues
 
 
+def _workflow_mapping(
+    catalog: PresetCatalog, effective: dict[tuple[str, str], JsonObject]
+) -> tuple[dict[str, str], list[Issue]]:
+    """Map each configure preset to the workflow preset that drives it."""
+    mapping: dict[str, str] = {}
+    issues: list[Issue] = []
+    for name in catalog.families[WORKFLOW_FAMILY]:
+        preset = effective.get((WORKFLOW_FAMILY, name))
+        if preset is None or _bool_field(preset, "hidden"):
+            continue
+        steps_value = preset.get("steps")
+        if not _is_list(steps_value):
+            issues.append(Issue("error", name, "workflow preset has no steps"))
+            continue
+        configure = next(
+            (
+                _string_field(step, "name")
+                for step in steps_value
+                if _is_object(step) and _string_field(step, "type") == "configure"
+            ),
+            None,
+        )
+        if not configure:
+            issues.append(Issue("error", name, "workflow preset has no configure step"))
+            continue
+        if configure in mapping:
+            issues.append(
+                Issue(
+                    "warning",
+                    name,
+                    f"duplicate workflow for configure preset {configure!r}; "
+                    f"keeping {mapping[configure]!r}",
+                )
+            )
+            continue
+        mapping[configure] = name
+    return mapping, issues
+
+
 def _cache_values(preset: JsonObject) -> dict[str, str]:
     cache_raw = _object_field(preset, "cacheVariables")
     return {key: _display_value(value) for key, value in cache_raw.items()}
@@ -1121,6 +1191,15 @@ def _structure_issues(plan: Plan) -> list[Issue]:
             )
         )
     issues.extend(_compiler_issues(plan))
+    if not plan.workflow:
+        issues.append(
+            Issue(
+                "warning",
+                plan.name,
+                "no workflow preset drives this configure preset; "
+                "the stages run one by one instead of as a single workflow",
+            )
+        )
     if plan.family in {"clang", "gcc"} and plan.arch is not None and plan.arch.lower() == "x86":
         issues.append(
             Issue(
@@ -1190,6 +1269,7 @@ def _create_plan(context: AnalysisContext, name: str, used_slugs: set[str]) -> P
         env={},
         notes=[],
         skip_reason=None,
+        workflow=context.workflow_map.get(name),
     )
     condition_ok = eval_condition(
         preset.get("condition"),
@@ -1224,6 +1304,8 @@ def analyse(
     issues.extend(resolve_issues)
     build_map, test_map, mapping_issues = _build_mappings(catalog, effective)
     issues.extend(mapping_issues)
+    workflow_map, workflow_issues = _workflow_mapping(catalog, effective)
+    issues.extend(workflow_issues)
     visible = [
         name
         for name in catalog.visible_names(CONFIGURE_FAMILY)
@@ -1236,6 +1318,7 @@ def analyse(
         effective=effective,
         build_map=build_map,
         test_map=test_map,
+        workflow_map=workflow_map,
     )
     used_slugs: set[str] = set()
     plans: list[Plan] = []
@@ -1261,51 +1344,95 @@ def _flattened_preset(preset: JsonObject, origin_file: Path, source_dir: Path) -
     return flattened
 
 
+def _workflow_presets(
+    plans: Sequence[Plan], catalog: PresetCatalog, source_dir: Path
+) -> list[JsonValue]:
+    """Collect the workflow presets that drive the selected plans."""
+    presets: list[JsonValue] = []
+    seen: set[str] = set()
+    for plan in plans:
+        if plan.skip_reason or not plan.workflow or plan.workflow in seen:
+            continue
+        seen.add(plan.workflow)
+        presets.append(
+            _flattened_preset(
+                catalog.resolve(WORKFLOW_FAMILY, plan.workflow),
+                catalog.origin(WORKFLOW_FAMILY, plan.workflow),
+                source_dir,
+            )
+        )
+    return presets
+
+
+def _configure_entry(plan: Plan, source_dir: Path) -> JsonObject:
+    """Flatten one configure preset with its isolated directories."""
+    preset = _flattened_preset(plan.effective, plan.origin_file, source_dir)
+    preset["binaryDir"] = plan.build_dir.as_posix()
+    if "installDir" in preset:
+        preset["installDir"] = plan.install_dir.as_posix()
+    return preset
+
+
+def _plan_entries(
+    plan: Plan,
+    family: str,
+    catalog: PresetCatalog,
+    source_dir: Path,
+    jobs: int | None = None,
+) -> list[JsonObject]:
+    """Flatten the build or test presets that belong to one plan."""
+    names = plan.build_presets if family == BUILD_FAMILY else plan.test_presets
+    effective = plan.build_effective if family == BUILD_FAMILY else plan.test_effective
+    entries: list[JsonObject] = []
+    for name in names:
+        entry = _flattened_preset(effective[name], catalog.origin(family, name), source_dir)
+        if jobs and family == BUILD_FAMILY:
+            entry["jobs"] = jobs
+        entries.append(entry)
+    return entries
+
+
+def _add_unique(target: list[JsonObject], seen: set[str], entries: Sequence[JsonObject]) -> None:
+    """Append the entries whose name has not been emitted yet."""
+    for entry in entries:
+        name = _string_field(entry, "name")
+        if name and name not in seen:
+            seen.add(name)
+            target.append(entry)
+
+
 def write_derived_presets(
-    plans: Sequence[Plan], catalog: PresetCatalog, source_dir: Path, path: Path
+    plans: Sequence[Plan],
+    catalog: PresetCatalog,
+    source_dir: Path,
+    path: Path,
+    jobs: int | None = None,
 ) -> None:
     """Write flattened presets with isolated binary/install directories."""
-    configure_presets: list[JsonValue] = []
-    build_presets: list[JsonValue] = []
-    test_presets: list[JsonValue] = []
+    configure_presets: list[JsonObject] = []
+    build_presets: list[JsonObject] = []
+    test_presets: list[JsonObject] = []
     seen_build: set[str] = set()
     seen_test: set[str] = set()
     for plan in plans:
         if plan.skip_reason:
             continue
-        configure = _flattened_preset(plan.effective, plan.origin_file, source_dir)
-        configure["binaryDir"] = plan.build_dir.as_posix()
-        if "installDir" in configure:
-            configure["installDir"] = plan.install_dir.as_posix()
-        configure_presets.append(configure)
-        for name in plan.build_presets:
-            if name in seen_build:
-                continue
-            seen_build.add(name)
-            build_presets.append(
-                _flattened_preset(
-                    plan.build_effective[name],
-                    catalog.origin(BUILD_FAMILY, name),
-                    source_dir,
-                )
-            )
-        for name in plan.test_presets:
-            if name in seen_test:
-                continue
-            seen_test.add(name)
-            test_presets.append(
-                _flattened_preset(
-                    plan.test_effective[name],
-                    catalog.origin(TEST_FAMILY, name),
-                    source_dir,
-                )
-            )
-    payload: JsonObject = {
+        configure_presets.append(_configure_entry(plan, source_dir))
+        _add_unique(
+            build_presets,
+            seen_build,
+            _plan_entries(plan, BUILD_FAMILY, catalog, source_dir, jobs),
+        )
+        _add_unique(test_presets, seen_test, _plan_entries(plan, TEST_FAMILY, catalog, source_dir))
+    workflow_presets = _workflow_presets(plans, catalog, source_dir)
+    payload: dict[str, object] = {
         "version": catalog.version or MIN_PRESET_VERSION,
         "configurePresets": configure_presets,
         "buildPresets": build_presets,
         "testPresets": test_presets,
     }
+    if workflow_presets:
+        payload["workflowPresets"] = workflow_presets
     if catalog.cmake_minimum_required is not None:
         payload["cmakeMinimumRequired"] = copy.deepcopy(catalog.cmake_minimum_required)
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -1351,15 +1478,24 @@ def _kill_tree(process: subprocess.Popen[str]) -> None:
         process.kill()
 
 
+_LOG_FLUSH_LINES = 64
+
+
 def _pump(pipe: IO[str], log_file: TextIO, tail: deque[str], *, echo: bool) -> None:
+    """Copy process output into the log, flushing in batches."""
     try:
+        pending = 0
         for line in pipe:
             log_file.write(line)
-            log_file.flush()
             tail.append(line)
             if echo:
                 sys.stdout.write(line)
+            pending += 1
+            if pending >= _LOG_FLUSH_LINES:
+                log_file.flush()
+                pending = 0
     finally:
+        log_file.flush()
         pipe.close()
 
 
@@ -1445,18 +1581,18 @@ def _call_validator(validator: Callable[[], str | None]) -> str | None:
 def _finish_stage(spec: StageSpec, settings: RunSettings, outcome: ProcessOutcome) -> StageResult:
     suffix = f" ({outcome.detail})" if outcome.detail else ""
     if settings.verbose:
-        print(
+        _emit(
             f"       -> {status_text(outcome.status, settings.style)}"
             f"{suffix} in {outcome.duration:.1f}s"
         )
     else:
-        print(f"{status_text(outcome.status, settings.style)}{suffix} in {outcome.duration:.1f}s")
+        _emit(f"{status_text(outcome.status, settings.style)}{suffix} in {outcome.duration:.1f}s")
     if outcome.status == "fail":
         if not settings.verbose:
             lines = [line.rstrip() for line in outcome.tail.splitlines() if line.strip()]
             for line in lines[-25:]:
-                print(f"          | {line}")
-        print(f"          log: {settings.log_dir / spec.log_name}")
+                _emit(f"          | {line}")
+        _emit(f"          log: {settings.log_dir / spec.log_name}")
     return StageResult(
         kind=spec.kind,
         label=spec.label,
@@ -1471,12 +1607,11 @@ def _finish_stage(spec: StageSpec, settings: RunSettings, outcome: ProcessOutcom
 def run_stage(spec: StageSpec, settings: RunSettings) -> StageResult:
     """Run one stage command, apply its validator, and print the result."""
     if settings.verbose:
-        print(f"       {spec.kind:<9} {settings.style(spec.label, 'dim')}")
+        _emit(f"       {spec.kind:<9} {settings.style(spec.label, 'dim')}")
     else:
-        print(
+        _emit(
             f"       {spec.kind:<9} {settings.style(spec.label, 'dim')} ... ",
             end="",
-            flush=True,
         )
     outcome = _run_process(spec, settings)
     if outcome.status == "pass" and spec.validator is not None:
@@ -1747,8 +1882,126 @@ def _run_tests(
     return stages
 
 
+def _use_workflow(plan: Plan, options: RunOptions) -> bool:
+    """Return whether the plan runs as one CMake workflow invocation."""
+    return plan.workflow is not None and set(options.stages) == set(STAGE_ORDER)
+
+
+def _workflow_command(workflow: str, options: RunOptions, derived: Path) -> list[str]:
+    """Build the ``cmake --workflow`` command for one preset."""
+    return [
+        options.cmake_bin,
+        "--workflow",
+        "--preset",
+        workflow,
+        "--presets-file",
+        str(derived),
+    ]
+
+
+def _read_text(path: Path) -> str:
+    try:
+        return path.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return ""
+
+
+def _workflow_steps(text: str) -> list[tuple[str, str]]:
+    """Return the (kind, preset) pairs CMake reported while running."""
+    return [(result.group(1), result.group(2)) for result in WORKFLOW_STEP_RE.finditer(text)]
+
+
+def _workflow_stage_results(
+    plan: Plan,
+    steps: Sequence[tuple[str, str]],
+    outcome: ProcessOutcome,
+    log_path: Path,
+) -> list[StageResult]:
+    """Turn one workflow invocation into per-step stage results."""
+    if not steps:
+        return [
+            StageResult(
+                kind="workflow",
+                label=plan.workflow or plan.name,
+                status=outcome.status,
+                duration=outcome.duration,
+                detail=outcome.detail,
+                log=log_path,
+                tail=outcome.tail,
+            )
+        ]
+    failing = len(steps) - 1 if outcome.status != "pass" else -1
+    return [
+        StageResult(
+            kind=kind,
+            label=label,
+            status="fail" if index == failing else "pass",
+            duration=outcome.duration if index == failing else 0.0,
+            detail=outcome.detail if index == failing else "",
+            log=log_path,
+            tail=outcome.tail if index == failing else "",
+        )
+        for index, (kind, label) in enumerate(steps)
+    ]
+
+
+def _apply_workflow_validators(plan: Plan, stages: list[StageResult], log_path: Path) -> None:
+    """Apply the configure and test validators to a finished workflow."""
+    for index, stage in enumerate(stages):
+        if stage.status != "pass":
+            continue
+        problem: str | None = None
+        if stage.kind == "configure":
+            problem = verify_configure_output(plan)
+        elif stage.kind == "test":
+            problem = _test_log_validator(log_path)
+        if problem:
+            stages[index] = replace(stage, status="fail", detail=problem)
+
+
+def _run_workflow(
+    plan: Plan, options: RunOptions, derived: Path, style: Style
+) -> list[StageResult]:
+    """Run one plan through its CMake workflow preset."""
+    settings = RunSettings(
+        cwd=REPO_ROOT,
+        env=plan.env,
+        log_dir=plan.log_dir,
+        timeout=options.timeout,
+        verbose=options.verbose,
+        style=style,
+    )
+    spec = StageSpec(
+        kind="workflow",
+        label=plan.workflow or plan.name,
+        command=tuple(_workflow_command(plan.workflow or "", options, derived)),
+        log_name="workflow.log",
+    )
+    outcome = _run_process(spec, settings)
+    log_path = plan.log_dir / spec.log_name
+    stages = _workflow_stage_results(
+        plan,
+        _workflow_steps(_read_text(log_path)),
+        outcome,
+        log_path,
+    )
+    _apply_workflow_validators(plan, stages, log_path)
+    failed = next((stage for stage in stages if stage.status == "fail"), None)
+    if failed is not None and outcome.status == "pass":
+        outcome = replace(outcome, status="fail", detail=failed.detail)
+    _finish_stage(spec, settings, outcome)
+    return stages
+
+
 def _clean_plan(plan: Plan) -> None:
     for directory in (plan.build_dir, plan.install_dir, plan.log_dir):
+        if directory.exists():
+            shutil.rmtree(directory, ignore_errors=True)
+
+
+def _remove_build_products(plan: Plan) -> None:
+    """Delete the build and install trees, keeping the logs."""
+    for directory in (plan.build_dir, plan.install_dir):
         if directory.exists():
             shutil.rmtree(directory, ignore_errors=True)
 
@@ -1758,7 +2011,7 @@ def _ensure_configure_stage(plan: Plan, options: RunOptions, style: Style) -> St
         return None
     if (plan.build_dir / "CMakeCache.txt").is_file():
         return None
-    print(
+    _emit(
         f"       {status_text('fail', style)} "
         "build directory is not configured; include the configure stage"
     )
@@ -1773,28 +2026,30 @@ def _ensure_configure_stage(plan: Plan, options: RunOptions, style: Style) -> St
 
 def _print_plan_header(index: int, total: int, plan: Plan, style: Style) -> None:
     arch = f" {plan.arch}" if plan.arch else ""
-    print()
-    print(
-        style(f"[{index}/{total}] {plan.name}", "bold"),
-        style(f"({plan.family}{arch})", "dim"),
-    )
+    title = style(f"[{index}/{total}] {plan.name}", "bold")
+    meta = style(f"({plan.family}{arch})", "dim")
+    _emit()
+    _emit(f"{title} {meta}")
     for note in plan.notes:
-        print(f"       note: {note}")
+        _emit(f"       note: {note}")
 
 
 def _execute_plan(plan: Plan, options: RunOptions, derived: Path, style: Style) -> PlanResult:
     result = PlanResult(plan)
     if plan.skip_reason:
-        print(f"       {status_text('skip', style)} {plan.skip_reason}")
+        _emit(f"       {status_text('skip', style)} {plan.skip_reason}")
         return result
     if options.clean:
         _clean_plan(plan)
     plan.log_dir.mkdir(parents=True, exist_ok=True)
+    if _use_workflow(plan, options):
+        result.stages.extend(_run_workflow(plan, options, derived, style))
+        return result
     if "configure" in options.stages:
         stage = _run_configure(plan, options, derived, style)
         result.stages.append(stage)
         if stage.status != "pass":
-            print(
+            _emit(
                 f"       {status_text('blocked', style)} "
                 "build/test skipped after a configure failure"
             )
@@ -1819,19 +2074,66 @@ def _execute_plan(plan: Plan, options: RunOptions, derived: Path, style: Style) 
     return result
 
 
-def execute_plans(
+def _execute_sequential(
     plans: Sequence[Plan], options: RunOptions, derived: Path, style: Style
 ) -> list[PlanResult]:
-    """Execute all selected presets and return their results."""
+    """Run every plan one after another, stopping early on --fail-fast."""
     results: list[PlanResult] = []
     total = len(plans)
     for index, plan in enumerate(plans, start=1):
         _print_plan_header(index, total, plan, style)
-        result = _execute_plan(plan, options, derived, style)
+        try:
+            result = _execute_plan(plan, options, derived, style)
+        finally:
+            if options.clean_after:
+                _remove_build_products(plan)
         results.append(result)
         if options.fail_fast and result.status == "fail":
             break
     return results
+
+
+def _execute_concurrent(
+    plans: Sequence[Plan], options: RunOptions, derived: Path, style: Style
+) -> list[PlanResult]:
+    """Run several plans in parallel, each in its own build tree."""
+    results: dict[int, PlanResult] = {}
+    stop = threading.Event()
+    lock = threading.Lock()
+
+    def run(index: int, plan: Plan) -> None:
+        _set_output_prefix(f"[{plan.name}] ")
+        try:
+            if stop.is_set():
+                return
+            for note in plan.notes:
+                _emit(f"       note: {note}")
+            try:
+                result = _execute_plan(plan, options, derived, style)
+            finally:
+                if options.clean_after:
+                    _remove_build_products(plan)
+            with lock:
+                results[index] = result
+            if result.status == "fail" and options.fail_fast:
+                stop.set()
+        finally:
+            _set_output_prefix("")
+
+    with ThreadPoolExecutor(max_workers=options.concurrency) as pool:
+        futures = [pool.submit(run, index, plan) for index, plan in enumerate(plans, start=1)]
+        for future in futures:
+            future.result()
+    return [results[index] for index in sorted(results)]
+
+
+def execute_plans(
+    plans: Sequence[Plan], options: RunOptions, derived: Path, style: Style
+) -> list[PlanResult]:
+    """Execute all selected presets, in parallel when concurrency allows."""
+    if options.concurrency <= 1 or len(plans) <= 1:
+        return _execute_sequential(plans, options, derived, style)
+    return _execute_concurrent(plans, options, derived, style)
 
 
 # --------------------------------------------------------------------------
@@ -1876,6 +2178,8 @@ def print_list(plans: Sequence[Plan], style: Style) -> None:
 
 
 def _dry_run_commands(plan: Plan, options: RunOptions, derived: Path) -> list[str]:
+    if _use_workflow(plan, options):
+        return [format_command(_workflow_command(plan.workflow or "", options, derived))]
     commands: list[str] = []
     if "configure" in options.stages:
         commands.append(format_command(_configure_command(plan, options, derived)))
@@ -2073,6 +2377,16 @@ def build_parser() -> argparse.ArgumentParser:
         help="pass --parallel N to the build stage (default: preset/native default)",
     )
     parser.add_argument(
+        "--concurrency",
+        type=int,
+        default=None,
+        metavar="N",
+        help=(
+            "number of presets to configure/build/test in parallel "
+            "(default: min(4, CPU count); 1 runs them serially)"
+        ),
+    )
+    parser.add_argument(
         "--timeout",
         type=float,
         default=1800.0,
@@ -2083,6 +2397,15 @@ def build_parser() -> argparse.ArgumentParser:
         "--clean",
         action="store_true",
         help="remove each preset's isolated build tree before configuring",
+    )
+    parser.add_argument(
+        "--clean-after",
+        action=argparse.BooleanOptionalAction,
+        default=False,
+        help=(
+            "delete each preset's build and install tree once its log is written "
+            "(default: disabled; use --clean-after to delete the products)"
+        ),
     )
     parser.add_argument(
         "--no-cpm-cache",
@@ -2145,6 +2468,8 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     args.stages = stages
     if args.jobs is not None and args.jobs <= 0:
         parser.error("--jobs must be greater than zero")
+    if args.concurrency is not None and args.concurrency <= 0:
+        parser.error("--concurrency must be greater than zero")
     if args.timeout < 0:
         parser.error("--timeout must be non-negative")
     return args
@@ -2213,8 +2538,10 @@ def _build_options(args: argparse.Namespace, tools: Toolchain) -> RunOptions:
         excludes=tuple(args.exclude),
         stages=tuple(args.stages),
         jobs=args.jobs,
+        concurrency=args.concurrency or min(4, os.cpu_count() or 1),
         timeout=args.timeout,
         clean=args.clean,
+        clean_after=args.clean_after,
         fail_fast=args.fail_fast,
         verbose=args.verbose,
         cmake_bin=tools.cmake,
@@ -2376,6 +2703,7 @@ def _dispatch(session: Session, args: argparse.Namespace) -> int:
             session.catalog,
             REPO_ROOT,
             derived,
+            jobs=session.options.jobs,
         )
     except OSError as exc:
         _print_error(session.style, f"could not write {derived}: {exc}")
