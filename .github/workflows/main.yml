@@ -1,0 +1,163 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  msvc:
+    name: MSVC ${{ matrix.arch }} ${{ matrix.config }}
+    runs-on: windows-latest
+    timeout-minutes: 45
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x64
+            config: Debug
+            preset: x64-debug
+          - arch: x64
+            config: Release
+            preset: x64-release
+          - arch: x86
+            config: Debug
+            preset: x86-debug
+          - arch: x86
+            config: Release
+            preset: x86-release
+
+    env:
+      CPM_SOURCE_CACHE: ${{ github.workspace }}/.cpm-cache
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Setup MSVC environment
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: ${{ matrix.arch }}
+
+      - name: Setup CMake
+        uses: jwlawson/actions-setup-cmake@v2
+        with:
+          cmake-version: '4.0.x'
+
+      - name: Setup Ninja
+        uses: seanmiddleditch/gha-setup-ninja@v5
+
+      # CPM caches downloaded dependency sources, not compiled libraries.
+      - name: Cache CPM sources
+        uses: actions/cache@v4
+        with:
+          path: .cpm-cache
+          key: cpm-msvc-${{ hashFiles('CMakeLists.txt', 'cmake/CPM.cmake') }}
+          restore-keys: |
+            cpm-msvc-
+
+      - name: Configure
+        run: >
+          cmake --fresh
+          --preset "MSVC ${{ matrix.preset }}"
+          -DPGO=OFF
+          -DUSE_SYSTEM_DEPS=OFF
+          -DBUILD_TESTING=ON
+
+      - name: Build
+        run: >
+          cmake --build
+          --preset "MSVC ${{ matrix.preset }}"
+          --parallel
+
+      - name: Test
+        run: >
+          ctest
+          --preset "MSVC ${{ matrix.preset }} ctest"
+          --parallel
+
+  msys2:
+    name: MSYS2 UCRT ${{ matrix.compiler }} ${{ matrix.config }}
+    runs-on: windows-latest
+    timeout-minutes: 45
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - compiler: Clang
+            config: Debug
+            preset: x64-debug
+            compiler_package: clang:p
+          - compiler: Clang
+            config: Release
+            preset: x64-release
+            compiler_package: clang:p
+          - compiler: GCC
+            config: Debug
+            preset: x64-debug
+            compiler_package: ''
+          - compiler: GCC
+            config: Release
+            preset: x64-release
+            compiler_package: ''
+
+    steps:
+      # MSYS2 recommends input line endings for Git checkout.
+      - name: Configure Git line endings
+        run: git config --global core.autocrlf input
+
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Setup MSYS2 UCRT64
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          update: true
+          cache: true
+          pacboy: >-
+            toolchain:p
+            cmake:p
+            ninja:p
+            benchmark:p
+            gtest:p
+            abseil-cpp:p
+            ${{ matrix.compiler_package }}
+
+      - name: Configure
+        shell: msys2 {0}
+        run: >
+          cmake --fresh
+          --preset "MSYS2 UCRT ${{ matrix.compiler }} ${{ matrix.preset }}"
+          -DPGO=OFF
+          -DUSE_SYSTEM_DEPS=ON
+          -DBUILD_TESTING=ON
+
+      - name: Build
+        shell: msys2 {0}
+        run: >
+          cmake --build
+          --preset "UCRT ${{ matrix.compiler }} ${{ matrix.preset }}"
+          --parallel
+
+      - name: Test
+        shell: msys2 {0}
+        run: >
+          ctest
+          --preset "UCRT ${{ matrix.compiler }} ${{ matrix.preset }} ctest"
+          --parallel
