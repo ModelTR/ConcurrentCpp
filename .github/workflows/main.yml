@@ -73,6 +73,7 @@ jobs:
           cmake --fresh
           --preset "MSVC ${{ matrix.preset }}"
           -DPGO=OFF
+          -DPGO_MODE=OFF
           -DUSE_SYSTEM_DEPS=OFF
           -DBUILD_TESTING=ON
 
@@ -144,6 +145,7 @@ jobs:
         run: >
           cmake --fresh
           --preset "MSYS2 UCRT ${{ matrix.compiler }} ${{ matrix.preset }}"
+          -DPGO_MODE=OFF
           -DPGO=OFF
           -DUSE_SYSTEM_DEPS=ON
           -DBUILD_TESTING=ON
