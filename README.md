@@ -1,6 +1,36 @@
 # Brief
 
-This a pure C++ 20 implementation for serval concurrent containers: forward list, queue and stack with different approaches, for personal study
+This a pure C++ 20 implementation for serval concurrent containers: forward list, queue and stack with different approaches, for personal study. This project support PGO optimization for **MSVC**, **UCRT64 Clang/GCC**(PGO functionality is done by AI Agent), you can see how PGO make difference in algorithms in graph shown(graphs is created by chatGPT). AI agent has done a lot of works in this project, inplace_vector.hpp, [xoshiro256pp.hpp and random.hpp](https://prng.di.unimi.it/xoshiro256plusplus.c) were done by agent. This project may still has a tons of issuse like portability in different build systems' workflow, so feel free to open issuses! 
+
+## Benchmakr
+
+### Producer-Consumer
+
+<p align="center">
+  <img src="benchmark/bench-logs/main-261125/producer_consumer_clang-main-261125.png" alt="Producer-Consumer Clang" width="400">
+  <img src="benchmark/bench-logs/main-261125/producer_consumer_gcc-main-261125.png" alt="Producer-Consumer GCC" width="400">
+</p>
+
+<p align="center">
+  <img src="benchmark/bench-logs/main-261125/producer_consumer_msvc-main-261125.png" alt="Producer-Consumer MSVC" width="400">
+  
+</p>
+
+### ElimiBackoffStack
+
+<p align="center">
+  <img src="benchmark/bench-logs/main-261125/05_slot_sensitivity-main-261125.png" alt="Slot Sensitivity" width="600">
+</p>
+
+### PGO
+
+<p align="center">
+  <img src="benchmark/bench-logs/main-261125/01_scalability_pgo-main-261125.png" alt="Scalablity PGO" width="600">
+</p>
+
+<p align="center">
+  <img src="benchmark/bench-logs/main-261125/02_pgo_lift_heatmap-main-261125.png" alt="PGO Lift Heatmap" width="600">
+</p>
 
 ## Benchmakr
 
