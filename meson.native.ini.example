@@ -1,0 +1,25 @@
+# Native file for incremental builds with a compiler cache.
+#
+# Meson/Ninja are incremental by default.  Wrapping the compiler with
+# ccache/sccache additionally reuses objects across build directories and
+# after `meson setup --wipe`, which is what CMake's USE_CHACHE /
+# sccache/ccache launcher does.
+#
+# Copy this file to meson.native.ini (ignored by git), adapt the compiler
+# names to your toolchain, then:
+#   meson setup builddir --native-file meson.native.ini
+#
+# scripts/meson_setup.py does this for you (auto-detects sccache/ccache and
+# writes the native file):
+#   python scripts/meson_setup.py builddir [--cache ccache|sccache]
+#
+# ccache variant:
+[binaries]
+c = ['ccache', 'gcc']
+cpp = ['ccache', 'g++']
+#
+# sccache variant (replace the two lines above with):
+# c = ['sccache', 'gcc']
+# cpp = ['sccache', 'g++']
+#
+# MSVC / clang-cl: the second element is cl.exe / clang-cl.exe.

@@ -9,6 +9,7 @@ build-pgo
 # Bazel
 bazel-*
 .bazelrc.local
+.bazel-cache/
 
 # Meson subprojects fetched from wraps
 subprojects/packagecache/
@@ -19,3 +20,7 @@ subprojects/googletest*/
 
 .mypy_cache
 .ruff_cache
+__pycache__
+
+# Local Meson native file (copy of meson.native.ini.example)
+meson.native.ini

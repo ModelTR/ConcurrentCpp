@@ -29,14 +29,19 @@ else
   add_project_arguments('-Wall', '-Wextra', language: 'cpp')
 endif
 
-# CMake links with -static on non-MSVC toolchains.
+# CMake applies -static only on Windows and uses lld there with Clang.
 exe_link_args = []
-if cpp.get_argument_syntax() != 'msvc'
+if cpp.get_argument_syntax() != 'msvc' and host_machine.system() == 'windows'
   exe_link_args += ['-static']
+  if cpp.get_id() == 'clang'
+    exe_link_args += ['-fuse-ld=lld']
+  endif
 endif
 
 project_inc = include_directories('include', 'src')
 bench_inc = include_directories('include', 'benchmark')
+# CMake gives ConcurrentTests only include/ (no src/).
+test_inc = include_directories('include')
 
 cmake = import('cmake')
 
@@ -63,7 +68,7 @@ benchmark_opts.add_cmake_defines({
   'BENCHMARK_ENABLE_WERROR': 'OFF',
   'BENCHMARK_ENABLE_LIBPFM': 'OFF',
 })
-benchmark_proj = cmake.subproject('benchmark-1.9.5', options: benchmark_opts)
+benchmark_proj = cmake.subproject('benchmark-1.10.0', options: benchmark_opts)
 benchmark_dep = benchmark_proj.dependency('benchmark')
 
 # --- googletest --------------------------------------------------------------
@@ -128,7 +133,7 @@ test_sources = [
 test_exe = executable(
   'ConcurrentTests',
   test_sources,
-  include_directories: project_inc,
+  include_directories: test_inc,
   dependencies: deps_test,
   link_args: exe_link_args,
   install: false,

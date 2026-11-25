@@ -64,6 +64,4 @@ This a pure C++ 20 implementation for serval concurrent containers: forward list
 - [x] CI/CD
 - [ ] More descriptions
   
-## Temporay
-- [ ] bazel and meson need updated to match CMake
 
