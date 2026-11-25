@@ -59,7 +59,6 @@ jobs:
       - name: Setup Ninja
         uses: seanmiddleditch/gha-setup-ninja@v5
 
-      # CPM caches downloaded dependency sources, not compiled libraries.
       - name: Cache CPM sources
         uses: actions/cache@v4
         with:
@@ -116,7 +115,6 @@ jobs:
             compiler_package: ''
 
     steps:
-      # MSYS2 recommends input line endings for Git checkout.
       - name: Configure Git line endings
         run: git config --global core.autocrlf input
 
@@ -138,6 +136,7 @@ jobs:
             benchmark:p
             gtest:p
             abseil-cpp:p
+            lld:p
             ${{ matrix.compiler_package }}
 
       - name: Configure
