@@ -41,9 +41,9 @@ This a pure C++ 20 implementation for serval concurrent containers: forward list
 - [ ] Concurrent queue
 - [ ] Add module functionality for GNU GCC and Clang complier
 - [x] Compatibility with different compliers:
-  - [x] UCRT Clang
+  - [x] UCRT64 Clang
   - [x] MSVC
-  - [x] UCRT GCC
+  - [x] UCRT64 GCC
 - [x] Compatibility with different build systems:CMake, Meson, Bazel
 - [x] Compatibility with IDEs:
   - [ ] Visual Studio(temporarily MSVC x86/x64-debug/release configures only)
@@ -57,7 +57,7 @@ This a pure C++ 20 implementation for serval concurrent containers: forward list
   - [x] Clang
   - [x] GCC
   - [x] MSVC
-- [ ] no-ninja generator support?(Maybe for Visual Studio Generator)
+- [x] no-ninja generator support?(Maybe for Visual Studio Generator)
 
 ## Other
 

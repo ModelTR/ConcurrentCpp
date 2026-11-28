@@ -24,3 +24,6 @@ __pycache__
 
 # Local Meson native file (copy of meson.native.ini.example)
 meson.native.ini
+
+# Single-file zipapp output
+scripts/dist/
