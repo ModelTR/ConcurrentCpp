@@ -63,7 +63,8 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 # point; the PGO bootstrap sub-build must not overwrite it.
 get_filename_component(_coucurrent_build_parent "${CMAKE_BINARY_DIR}" DIRECTORY)
 if(CMAKE_EXPORT_COMPILE_COMMANDS
-   AND _coucurrent_build_parent STREQUAL "${CMAKE_SOURCE_DIR}/build")
+   AND _coucurrent_build_parent STREQUAL "${CMAKE_SOURCE_DIR}/build"
+   AND NOT CMAKE_GENERATOR MATCHES "Visual Studio")
     add_custom_target(compile_commands_entrypoint ALL
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
             "${CMAKE_BINARY_DIR}/compile_commands.json"
