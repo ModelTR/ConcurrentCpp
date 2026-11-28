@@ -16,7 +16,7 @@ permissions:
 
 jobs:
   msvc:
-    name: MSVC ${{ matrix.arch }} ${{ matrix.config }}
+    name: MSVC Ninja ${{ matrix.arch }} ${{ matrix.config }}
     runs-on: windows-latest
     timeout-minutes: 45
 
@@ -54,7 +54,7 @@ jobs:
       - name: Setup CMake
         uses: jwlawson/actions-setup-cmake@v2
         with:
-          cmake-version: '4.0.x'
+          cmake-version: '4.4.x'
 
       - name: Setup Ninja
         uses: seanmiddleditch/gha-setup-ninja@v5
@@ -70,7 +70,7 @@ jobs:
       - name: Configure
         run: >
           cmake --fresh
-          --preset "msvc-${{ matrix.preset }}"
+          --preset "msvc-${{ matrix.preset }}-ninja"
           -DPGO=OFF
           -DPGO_MODE=OFF
           -DUSE_SYSTEM_DEPS=OFF
@@ -79,17 +79,89 @@ jobs:
       - name: Build
         run: >
           cmake --build
-          --preset "msvc-${{ matrix.preset }}"
+          --preset "msvc-${{ matrix.preset }}-ninja"
           --parallel
 
       - name: Test
         run: >
           ctest
-          --preset "msvc-${{ matrix.preset }}-ctest"
+          --preset "msvc-${{ matrix.preset }}-ninja"
+          --parallel
+
+  msbuild:
+    # The msvc-*-msbuild presets use the "Visual Studio 18 2026" generator, so
+    # the runner must provide VS 2026.  windows-latest currently ships it.
+    name: MSVC MSBuild ${{ matrix.arch }} ${{ matrix.config }}
+    runs-on: windows-latest
+    timeout-minutes: 45
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x64
+            config: Debug
+            preset: x64-debug
+          - arch: x64
+            config: Release
+            preset: x64-release
+          - arch: x86
+            config: Debug
+            preset: x86-debug
+          - arch: x86
+            config: Release
+            preset: x86-release
+
+    env:
+      CPM_SOURCE_CACHE: ${{ github.workspace }}/.cpm-cache
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Setup MSVC environment
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: ${{ matrix.arch }}
+
+      - name: Setup CMake
+        uses: jwlawson/actions-setup-cmake@v2
+        with:
+          cmake-version: '4.4.x'
+
+      - name: Cache CPM sources
+        uses: actions/cache@v4
+        with:
+          path: .cpm-cache
+          key: cpm-msbuild-${{ hashFiles('CMakeLists.txt', 'cmake/CPM.cmake') }}
+          restore-keys: |
+            cpm-msbuild-
+
+      - name: Configure
+        run: >
+          cmake --fresh
+          --preset "msvc-${{ matrix.preset }}-msbuild"
+          -DPGO=OFF
+          -DPGO_MODE=OFF
+          -DUSE_SYSTEM_DEPS=OFF
+          -DBUILD_TESTING=ON
+
+      - name: Build
+        run: >
+          cmake --build
+          --preset "msvc-${{ matrix.preset }}-msbuild"
+          --parallel
+
+      - name: Test
+        run: >
+          ctest
+          --preset "msvc-${{ matrix.preset }}-msbuild"
           --parallel
 
   msys2:
-    name: MSYS2 UCRT ${{ matrix.compiler }} ${{ matrix.config }}
+    name: MSYS2 UCRT64 ${{ matrix.compiler }} ${{ matrix.config }}
     runs-on: windows-latest
     timeout-minutes: 45
 
@@ -147,7 +219,7 @@ jobs:
         shell: msys2 {0}
         run: >
           cmake --fresh
-          --preset "ucrt-${{ matrix.slug }}-${{ matrix.preset }}"
+          --preset "ucrt64-${{ matrix.slug }}-${{ matrix.preset }}-ninja"
           -DPGO_MODE=OFF
           -DPGO=OFF
           -DUSE_SYSTEM_DEPS=ON
@@ -157,12 +229,12 @@ jobs:
         shell: msys2 {0}
         run: >
           cmake --build
-          --preset "ucrt-${{ matrix.slug }}-${{ matrix.preset }}"
+          --preset "ucrt64-${{ matrix.slug }}-${{ matrix.preset }}-ninja"
           --parallel
 
       - name: Test
         shell: msys2 {0}
         run: >
           ctest
-          --preset "ucrt-${{ matrix.slug }}-${{ matrix.preset }}-ctest"
+          --preset "ucrt64-${{ matrix.slug }}-${{ matrix.preset }}-ninja"
           --parallel

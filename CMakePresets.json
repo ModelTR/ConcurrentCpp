@@ -2,8 +2,8 @@
     "version": 6,
     "configurePresets": [
         {
-            "name": "msvc",
-            "description": "Visual Studio",
+            "name": "msvc-ninja",
+            "description": "Visual Studio | Ninja",
             "hidden": true,
             "generator": "Ninja",
             "binaryDir": "${sourceDir}/build/${presetName}",
@@ -19,10 +19,10 @@
             }
         },
         {
-            "name": "msvc-x64-debug",
-            "displayName": "MSVC x64-Debug",
-            "description": "Visual Studio",
-            "inherits": "msvc",
+            "name": "msvc-x64-debug-ninja",
+            "displayName": "conf-msvc-x64-debug-ninja",
+            "description": "Visual Studio | Ninja",
+            "inherits": "msvc-ninja",
             "architecture": {
                 "value": "x64",
                 "strategy": "external"
@@ -32,19 +32,19 @@
             }
         },
         {
-            "name": "msvc-x64-release",
-            "displayName": "MSVC x64-Release",
-            "description": "Visual Studio",
-            "inherits": "msvc-x64-debug",
+            "name": "msvc-x64-release-ninja",
+            "displayName": "conf-msvc-x64-release-ninja",
+            "description": "Visual Studi | Ninjao",
+            "inherits": "msvc-x64-debug-ninja",
             "cacheVariables": {
                 "CMAKE_BUILD_TYPE": "Release"
             }
         },
         {
-            "name": "msvc-x86-debug",
-            "displayName": "MSVC x86 Debug",
-            "description": "Visual Studio",
-            "inherits": "msvc",
+            "name": "msvc-x86-debug-ninja",
+            "displayName": "conf-msvc-x86-debug-ninja",
+            "description": "Visual Studio | Ninja",
+            "inherits": "msvc-ninja",
             "architecture": {
                 "value": "x86",
                 "strategy": "external"
@@ -54,17 +54,17 @@
             }
         },
         {
-            "name": "msvc-x86-release",
-            "displayName": "MSVC x86 Release",
-            "description": "Visual Studio",
-            "inherits": "msvc-x86-debug",
+            "name": "msvc-x86-release-ninja",
+            "displayName": "conf-msvc-x86-release-ninja",
+            "description": "Visual Studio | Ninja",
+            "inherits": "msvc-x86-debug-ninja",
             "cacheVariables": {
                 "CMAKE_BUILD_TYPE": "Release"
             }
         },
         {
-            "name": "msvc-sccache",
-            "description": "Visual Studio | Need Sccache",
+            "name": "msvc-ninja-sccache",
+            "description": "Visual Studio | Ninja | Need Sccache",
             "hidden": true,
             "generator": "Ninja",
             "binaryDir": "${sourceDir}/build/${presetName}",
@@ -82,10 +82,10 @@
             }
         },
         {
-            "name": "msvc-x64-debug-sccache",
-            "displayName": "MSVC x64-Debug sccache",
-            "description": "Visual Studio | Need Sccache",
-            "inherits": "msvc-sccache",
+            "name": "msvc-x64-debug-ninja-sccache",
+            "displayName": "conf-msvc-x64-debug-ninja-sccache",
+            "description": "Visual Studio | Ninja | Need Sccache",
+            "inherits": "msvc-ninja-sccache",
             "architecture": {
                 "value": "x64",
                 "strategy": "external"
@@ -95,19 +95,19 @@
             }
         },
         {
-            "name": "msvc-x64-release-sccache",
-            "displayName": "MSVC x64-Release sccache",
-            "description": "Visual Studio | Need Sccache",
-            "inherits": "msvc-x64-debug-sccache",
+            "name": "msvc-x64-release-ninja-sccache",
+            "displayName": "conf-msvc-x64-release-ninja-sccache",
+            "description": "Visual Studio | Ninja | Need Sccache",
+            "inherits": "msvc-x64-debug-ninja-sccache",
             "cacheVariables": {
                 "CMAKE_BUILD_TYPE": "Release"
             }
         },
         {
-            "name": "msvc-x86-debug-sccache",
-            "displayName": "MSVC x86 Debug sccache",
-            "description": "Visual Studio | Need Sccache",
-            "inherits": "msvc-sccache",
+            "name": "msvc-x86-debug-ninja-sccache",
+            "displayName": "conf-msvc-x86-debug-ninja-sccache",
+            "description": "Visual Studio | Ninja | Need Sccache",
+            "inherits": "msvc-ninja-sccache",
             "architecture": {
                 "value": "x86",
                 "strategy": "external"
@@ -117,18 +117,67 @@
             }
         },
         {
-            "name": "msvc-x86-release-sccache",
-            "displayName": "MSVC x86 Release sccache",
-            "description": "Visual Studio | Need Sccache",
-            "inherits": "msvc-x86-debug-sccache",
+            "name": "msvc-x86-release-ninja-sccache",
+            "displayName": "conf-msvc-x86-release-ninja-sccache",
+            "description": "Visual Studio | Ninja | Need Sccache",
+            "inherits": "msvc-x86-debug-ninja-sccache",
             "cacheVariables": {
                 "CMAKE_BUILD_TYPE": "Release"
             }
         },
         {
-            "name": "ucrt-clang",
+            "name": "msvc-msbuild",
+            "description": "Visual Studio | MSBuild(Visual Studio 18 2026)",
             "hidden": true,
-            "description": "MSYS2 UCRT Clang",
+            "generator": "Visual Studio 18 2026",
+            "binaryDir": "${sourceDir}/build/${presetName}",
+            "installDir": "${sourceDir}/install",
+            "cacheVariables": {
+                "CMAKE_C_COMPILER": "cl.exe",
+                "CMAKE_CXX_COMPILER": "cl.exe"
+            },
+            "condition": {
+                "type": "equals",
+                "lhs": "${hostSystemName}",
+                "rhs": "Windows"
+            }
+        },
+        {
+            "name": "msvc-x64-debug-msbuild",
+            "displayName": "conf-msvc-x64-debug-msbuild",
+            "description": "Visual Studio | MSBuild(Visual Studio 18 2026)",
+            "inherits": "msvc-msbuild",
+            "architecture": {
+                "value": "x64",
+                "strategy": "external"
+            }
+        },
+        {
+            "name": "msvc-x64-release-msbuild",
+            "displayName": "conf-msvc-x64-release-msbuild",
+            "description": "Visual Studio | MSBuild(Visual Studio 18 2026)",
+            "inherits": "msvc-x64-debug-msbuild"
+        },
+        {
+            "name": "msvc-x86-debug-msbuild",
+            "displayName": "conf-msvc-x86-debug-msbuild",
+            "description": "Visual Studio | MSBuild(Visual Studio 18 2026)",
+            "inherits": "msvc-msbuild",
+            "architecture": {
+                "value": "x86",
+                "strategy": "external"
+            }
+        },
+        {
+            "name": "msvc-x86-release-msbuild",
+            "displayName": "conf-msvc-x86-release-msbuild",
+            "description": "Visual Studio | MSBuild(Visual Studio 18 2026)",
+            "inherits": "msvc-x86-debug-msbuild"
+        },
+        {
+            "name": "ucrt64-clang",
+            "hidden": true,
+            "description": "MSYS2 UCRT64 Clang | Ninja",
             "generator": "Ninja",
             "binaryDir": "${sourceDir}/build/${presetName}",
             "installDir": "${sourceDir}/install",
@@ -144,10 +193,10 @@
             "toolchainFile": "${sourceDir}/cmake/toolchains/msys2-ucrt64.cmake"
         },
         {
-            "name": "ucrt-clang-x64-debug",
-            "displayName": "UCRT Clang x64-Debug",
-            "description": "MSYS2 UCRT Clang",
-            "inherits": "ucrt-clang",
+            "name": "ucrt64-clang-x64-debug-ninja",
+            "displayName": "conf-ucrt64-clang-x64-debug-ninja",
+            "description": "MSYS2 UCRT64 Clang | Ninja",
+            "inherits": "ucrt64-clang",
             "architecture": {
                 "value": "x64",
                 "strategy": "external"
@@ -157,10 +206,10 @@
             }
         },
         {
-            "name": "ucrt-clang-x64-release",
-            "displayName": "UCRT Clang x64-Release",
-            "description": "MSYS2 UCRT Clang",
-            "inherits": "ucrt-clang",
+            "name": "ucrt64-clang-x64-release-ninja",
+            "displayName": "conf-ucrt64-clang-x64-release-ninja",
+            "description": "MSYS2 UCRT64 Clang | Ninja",
+            "inherits": "ucrt64-clang",
             "architecture": {
                 "value": "x64",
                 "strategy": "external"
@@ -170,10 +219,10 @@
             }
         },
         {
-            "name": "ucrt-clang-x86-debug",
-            "displayName": "UCRT Clang x86-Debug",
-            "description": "MSYS2 UCRT Clang",
-            "inherits": "ucrt-clang",
+            "name": "ucrt64-clang-x86-debug-ninja",
+            "displayName": "conf-ucrt64-clang-x86-debug-ninja",
+            "description": "MSYS2 UCRT64 Clang | Ninja",
+            "inherits": "ucrt64-clang",
             "architecture": {
                 "value": "x86",
                 "strategy": "external"
@@ -183,10 +232,10 @@
             }
         },
         {
-            "name": "ucrt-clang-x86-release",
-            "displayName": "UCRT Clang x86-Release",
-            "description": "MSYS2 UCRT Clang",
-            "inherits": "ucrt-clang",
+            "name": "ucrt64-clang-x86-release-ninja",
+            "displayName": "conf-ucrt64-clang-x86-release-ninja",
+            "description": "MSYS2 UCRT64 Clang | Ninja",
+            "inherits": "ucrt64-clang",
             "architecture": {
                 "value": "x86",
                 "strategy": "external"
@@ -196,20 +245,20 @@
             }
         },
         {
-            "name": "ucrt-clang-sccache",
+            "name": "ucrt64-clang-sccache",
             "hidden": true,
-            "description": "MSYS2 UCRT Clang | Need Sccache",
-            "inherits": "ucrt-clang",
+            "description": "MSYS2 UCRT64 Clang | Ninja | Need Sccache",
+            "inherits": "ucrt64-clang",
             "cacheVariables": {
                 "CMAKE_CXX_COMPILER_LAUNCHER": "sccache",
                 "CMAKE_C_COMPILER_LAUNCHER": "sccache"
             }
         },
         {
-            "name": "ucrt-clang-x64-debug-sccache",
-            "displayName": "UCRT Clang x64-Debug sccache",
-            "description": "MSYS2 UCRT Clang | Need Sccache",
-            "inherits": "ucrt-clang-sccache",
+            "name": "ucrt64-clang-x64-debug-ninja-sccache",
+            "displayName": "conf-ucrt64-clang-x64-debug-ninja-sccache",
+            "description": "MSYS2 UCRT64 Clang | Ninja | Need Sccache",
+            "inherits": "ucrt64-clang-sccache",
             "architecture": {
                 "value": "x64",
                 "strategy": "external"
@@ -219,10 +268,10 @@
             }
         },
         {
-            "name": "ucrt-clang-x64-release-sccache",
-            "displayName": "UCRT Clang x64-Release sccache",
-            "description": "MSYS2 UCRT Clang | Need Sccache",
-            "inherits": "ucrt-clang-sccache",
+            "name": "ucrt64-clang-x64-release-ninja-sccache",
+            "displayName": "conf-ucrt64-clang-x64-release-ninja-sccache",
+            "description": "MSYS2 UCRT64 Clang | Ninja | Need Sccache",
+            "inherits": "ucrt64-clang-sccache",
             "architecture": {
                 "value": "x64",
                 "strategy": "external"
@@ -232,10 +281,10 @@
             }
         },
         {
-            "name": "ucrt-clang-x86-debug-sccache",
-            "displayName": "UCRT Clang x86-Debug sccache",
-            "description": "MSYS2 UCRT Clang | Need Sccache",
-            "inherits": "ucrt-clang-sccache",
+            "name": "ucrt64-clang-x86-debug-ninja-sccache",
+            "displayName": "conf-ucrt64-clang-x86-debug-ninja-sccache",
+            "description": "MSYS2 UCRT64 Clang | Ninja | Need Sccache",
+            "inherits": "ucrt64-clang-sccache",
             "architecture": {
                 "value": "x86",
                 "strategy": "external"
@@ -245,10 +294,10 @@
             }
         },
         {
-            "name": "ucrt-clang-x86-release-sccache",
-            "displayName": "UCRT Clang x86-Release sccache",
-            "description": "MSYS2 UCRT Clang | Need Sccache",
-            "inherits": "ucrt-clang-sccache",
+            "name": "ucrt64-clang-x86-release-ninja-sccache",
+            "displayName": "conf-ucrt64-clang-x86-release-ninja-sccache",
+            "description": "MSYS2 UCRT64 Clang | Ninja | Need Sccache",
+            "inherits": "ucrt64-clang-sccache",
             "architecture": {
                 "value": "x86",
                 "strategy": "external"
@@ -258,20 +307,20 @@
             }
         },
         {
-            "name": "ucrt-clang-ccache",
+            "name": "ucrt64-clang-ccache",
             "hidden": true,
-            "description": "MSYS2 UCRT Clang | Need ccache",
-            "inherits": "ucrt-clang",
+            "description": "MSYS2 UCRT64 Clang | Ninja | Need ccache",
+            "inherits": "ucrt64-clang",
             "cacheVariables": {
                 "CMAKE_CXX_COMPILER_LAUNCHER": "ccache",
                 "CMAKE_C_COMPILER_LAUNCHER": "ccache"
             }
         },
         {
-            "name": "ucrt-clang-x64-debug-ccache",
-            "displayName": "UCRT Clang x64-Debug ccache",
-            "description": "MSYS2 UCRT Clang | Need ccache",
-            "inherits": "ucrt-clang-ccache",
+            "name": "ucrt64-clang-x64-debug-ninja-ccache",
+            "displayName": "conf-ucrt64-clang-x64-debug-ninja-ccache",
+            "description": "MSYS2 UCRT64 Clang | Ninja | Need ccache",
+            "inherits": "ucrt64-clang-ccache",
             "architecture": {
                 "value": "x64",
                 "strategy": "external"
@@ -281,10 +330,10 @@
             }
         },
         {
-            "name": "ucrt-clang-x64-release-ccache",
-            "displayName": "UCRT Clang x64-Release ccache",
-            "description": "MSYS2 UCRT Clang | Need ccache",
-            "inherits": "ucrt-clang-ccache",
+            "name": "ucrt64-clang-x64-release-ninja-ccache",
+            "displayName": "conf-ucrt64-clang-x64-release-ninja-ccache",
+            "description": "MSYS2 UCRT64 Clang | Ninja | Need ccache",
+            "inherits": "ucrt64-clang-ccache",
             "architecture": {
                 "value": "x64",
                 "strategy": "external"
@@ -294,10 +343,10 @@
             }
         },
         {
-            "name": "ucrt-clang-x86-debug-ccache",
-            "displayName": "UCRT Clang x86-Debug ccache",
-            "description": "MSYS2 UCRT Clang | Need ccache",
-            "inherits": "ucrt-clang-ccache",
+            "name": "ucrt64-clang-x86-debug-ninja-ccache",
+            "displayName": "conf-ucrt64-clang-x86-debug-ninja-ccache",
+            "description": "MSYS2 UCRT64 Clang | Ninja | Need ccache",
+            "inherits": "ucrt64-clang-ccache",
             "architecture": {
                 "value": "x86",
                 "strategy": "external"
@@ -307,10 +356,10 @@
             }
         },
         {
-            "name": "ucrt-clang-x86-release-ccache",
-            "displayName": "UCRT Clang x86-Release ccache",
-            "description": "MSYS2 UCRT Clang | Need ccache",
-            "inherits": "ucrt-clang-ccache",
+            "name": "ucrt64-clang-x86-release-ninja-ccache",
+            "displayName": "conf-ucrt64-clang-x86-release-ninja-ccache",
+            "description": "MSYS2 UCRT64 Clang | Ninja | Need ccache",
+            "inherits": "ucrt64-clang-ccache",
             "architecture": {
                 "value": "x86",
                 "strategy": "external"
@@ -320,7 +369,7 @@
             }
         },
         {
-            "name": "ucrt-gcc",
+            "name": "ucrt64-gcc",
             "hidden": true,
             "description": "MSYS2 GCC Clang",
             "generator": "Ninja",
@@ -338,10 +387,10 @@
             "toolchainFile": "${sourceDir}/cmake/toolchains/msys2-ucrt64.cmake"
         },
         {
-            "name": "ucrt-gcc-x64-debug",
-            "displayName": "UCRT GCC x64-debug",
-            "description": "MSYS2 UCRT GCC",
-            "inherits": "ucrt-gcc",
+            "name": "ucrt64-gcc-x64-debug-ninja",
+            "displayName": "conf-ucrt64-gcc-x64-debug-ninja",
+            "description": "MSYS2 UCRT64 GCC",
+            "inherits": "ucrt64-gcc",
             "architecture": {
                 "value": "x64",
                 "strategy": "external"
@@ -351,10 +400,10 @@
             }
         },
         {
-            "name": "ucrt-gcc-x64-release",
-            "displayName": "UCRT GCC x64-release",
-            "description": "MSYS2 UCRT GCC",
-            "inherits": "ucrt-gcc",
+            "name": "ucrt64-gcc-x64-release-ninja",
+            "displayName": "conf-ucrt64-gcc-x64-release-ninja",
+            "description": "MSYS2 UCRT64 GCC",
+            "inherits": "ucrt64-gcc",
             "architecture": {
                 "value": "x64",
                 "strategy": "external"
@@ -364,10 +413,10 @@
             }
         },
         {
-            "name": "ucrt-gcc-x86-debug",
-            "displayName": "UCRT GCC x86-debug",
-            "description": "MSYS2 UCRT GCC",
-            "inherits": "ucrt-gcc",
+            "name": "ucrt64-gcc-x86-debug-ninja",
+            "displayName": "conf-ucrt64-gcc-x86-debug-ninja",
+            "description": "MSYS2 UCRT64 GCC",
+            "inherits": "ucrt64-gcc",
             "architecture": {
                 "value": "x86",
                 "strategy": "external"
@@ -377,10 +426,10 @@
             }
         },
         {
-            "name": "ucrt-gcc-x86-release",
-            "displayName": "UCRT GCC x86-release",
-            "description": "MSYS2 UCRT GCC",
-            "inherits": "ucrt-gcc",
+            "name": "ucrt64-gcc-x86-release-ninja",
+            "displayName": "conf-ucrt64-gcc-x86-release-ninja",
+            "description": "MSYS2 UCRT64 GCC",
+            "inherits": "ucrt64-gcc",
             "architecture": {
                 "value": "x86",
                 "strategy": "external"
@@ -390,20 +439,20 @@
             }
         },
         {
-            "name": "ucrt-gcc-sccache",
+            "name": "ucrt64-gcc-sccache",
             "hidden": true,
             "description": "MSYS2 GCC | Need sccache",
-            "inherits": "ucrt-gcc",
+            "inherits": "ucrt64-gcc",
             "cacheVariables": {
                 "CMAKE_CXX_COMPILER_LAUNCHER": "sccache",
                 "CMAKE_C_COMPILER_LAUNCHER": "sccache"
             }
         },
         {
-            "name": "ucrt-gcc-x64-debug-sccache",
-            "displayName": "UCRT GCC x64-Debug sccache",
-            "description": "MSYS2 UCRT GCC | Need Sccache",
-            "inherits": "ucrt-gcc-sccache",
+            "name": "ucrt64-gcc-x64-debug-ninja-sccache",
+            "displayName": "conf-ucrt64-gcc-x64-debug-ninja-sccache",
+            "description": "MSYS2 UCRT64 GCC | Need Sccache",
+            "inherits": "ucrt64-gcc-sccache",
             "architecture": {
                 "value": "x64",
                 "strategy": "external"
@@ -413,10 +462,10 @@
             }
         },
         {
-            "name": "ucrt-gcc-x64-release-sccache",
-            "displayName": "UCRT GCC x64-Release sccache",
-            "description": "MSYS2 UCRT GCC | Need Sccache",
-            "inherits": "ucrt-gcc-sccache",
+            "name": "ucrt64-gcc-x64-release-ninja-sccache",
+            "displayName": "conf-ucrt64-gcc-x64-release-ninja-sccache",
+            "description": "MSYS2 UCRT64 GCC | Need Sccache",
+            "inherits": "ucrt64-gcc-sccache",
             "architecture": {
                 "value": "x64",
                 "strategy": "external"
@@ -426,10 +475,10 @@
             }
         },
         {
-            "name": "ucrt-gcc-x86-debug-sccache",
-            "displayName": "UCRT GCC x86-Debug sccache",
-            "description": "MSYS2 UCRT GCC | Need Sccache",
-            "inherits": "ucrt-gcc-sccache",
+            "name": "ucrt64-gcc-x86-debug-ninja-sccache",
+            "displayName": "conf-ucrt64-gcc-x86-debug-ninja-sccache",
+            "description": "MSYS2 UCRT64 GCC | Need Sccache",
+            "inherits": "ucrt64-gcc-sccache",
             "architecture": {
                 "value": "x86",
                 "strategy": "external"
@@ -439,10 +488,10 @@
             }
         },
         {
-            "name": "ucrt-gcc-x86-release-sccache",
-            "displayName": "UCRT GCC x86-Release sccache",
-            "description": "MSYS2 UCRT GCC | Need Sccache",
-            "inherits": "ucrt-gcc-sccache",
+            "name": "ucrt64-gcc-x86-release-ninja-sccache",
+            "displayName": "conf-ucrt64-gcc-x86-release-ninja-sccache",
+            "description": "MSYS2 UCRT64 GCC | Need Sccache",
+            "inherits": "ucrt64-gcc-sccache",
             "architecture": {
                 "value": "x86",
                 "strategy": "external"
@@ -452,20 +501,20 @@
             }
         },
         {
-            "name": "ucrt-gcc-ccache",
+            "name": "ucrt64-gcc-ccache",
             "hidden": true,
-            "description": "MSYS2 GCC | Need ccache",
-            "inherits": "ucrt-gcc",
+            "description": "MSYS2 UCRT64 GCC | Need ccache",
+            "inherits": "ucrt64-gcc",
             "cacheVariables": {
                 "CMAKE_CXX_COMPILER_LAUNCHER": "ccache",
                 "CMAKE_C_COMPILER_LAUNCHER": "ccache"
             }
         },
         {
-            "name": "ucrt-gcc-x64-debug-ccache",
-            "displayName": "UCRT GCC x64-Debug ccache",
-            "description": "MSYS2 UCRT GCC | Need ccache",
-            "inherits": "ucrt-gcc-ccache",
+            "name": "ucrt64-gcc-x64-debug-ninja-ccache",
+            "displayName": "conf-ucrt64-gcc-x64-debug-ninja-ccache",
+            "description": "MSYS2 UCRT64 GCC | Need ccache",
+            "inherits": "ucrt64-gcc-ccache",
             "architecture": {
                 "value": "x64",
                 "strategy": "external"
@@ -475,10 +524,10 @@
             }
         },
         {
-            "name": "ucrt-gcc-x64-release-ccache",
-            "displayName": "UCRT GCC x64-Release ccache",
-            "description": "MSYS2 UCRT GCC | Need ccache",
-            "inherits": "ucrt-gcc-ccache",
+            "name": "ucrt64-gcc-x64-release-ninja-ccache",
+            "displayName": "conf-ucrt64-gcc-x64-release-ninja-ccache",
+            "description": "MSYS2 UCRT64 GCC | Need ccache",
+            "inherits": "ucrt64-gcc-ccache",
             "architecture": {
                 "value": "x64",
                 "strategy": "external"
@@ -488,10 +537,10 @@
             }
         },
         {
-            "name": "ucrt-gcc-x86-debug-ccache",
-            "displayName": "UCRT GCC x86-Debug ccache",
-            "description": "MSYS2 UCRT GCC | Need ccache",
-            "inherits": "ucrt-gcc-ccache",
+            "name": "ucrt64-gcc-x86-debug-ninja-ccache",
+            "displayName": "conf-ucrt64-gcc-x86-debug-ninja-ccache",
+            "description": "MSYS2 UCRT64 GCC | Need ccache",
+            "inherits": "ucrt64-gcc-ccache",
             "architecture": {
                 "value": "x86",
                 "strategy": "external"
@@ -501,10 +550,10 @@
             }
         },
         {
-            "name": "ucrt-gcc-x86-release-ccache",
-            "displayName": "UCRT GCC x86-Release ccache",
-            "description": "MSYS2 UCRT GCC | Need ccache",
-            "inherits": "ucrt-gcc-ccache",
+            "name": "ucrt64-gcc-x86-release-ninja-ccache",
+            "displayName": "conf-ucrt64-gcc-x86-release-ninja-ccache",
+            "description": "MSYS2 UCRT64 GCC | Need ccache",
+            "inherits": "ucrt64-gcc-ccache",
             "architecture": {
                 "value": "x86",
                 "strategy": "external"
@@ -516,196 +565,224 @@
     ],
     "buildPresets": [
         {
-            "name": "ucrt-clang-x64-debug",
-            "description": "MSYS2 UCRT Clang",
-            "displayName": "UCRT Clang x64-debug",
-            "configurePreset": "ucrt-clang-x64-debug"
+            "name": "ucrt64-clang-x64-debug-ninja",
+            "description": "MSYS2 UCRT64 Clang",
+            "displayName": "build-ucrt64-clang-x64-debug-ninja",
+            "configurePreset": "ucrt64-clang-x64-debug-ninja"
         },
         {
-            "name": "ucrt-clang-x64-release",
-            "description": "MSYS2 UCRT Clang",
-            "displayName": "UCRT Clang x64-release",
-            "configurePreset": "ucrt-clang-x64-release"
+            "name": "ucrt64-clang-x64-release-ninja",
+            "description": "MSYS2 UCRT64 Clang",
+            "displayName": "build-ucrt64-clang-x64-release-ninja",
+            "configurePreset": "ucrt64-clang-x64-release-ninja"
         },
         {
-            "name": "ucrt-clang-x86-debug",
-            "description": "MSYS2 UCRT Clang",
-            "displayName": "UCRT Clang x86-debug",
-            "configurePreset": "ucrt-clang-x86-debug"
+            "name": "ucrt64-clang-x86-debug-ninja",
+            "description": "MSYS2 UCRT46 Clang",
+            "displayName": "build-ucrt64-clang-x86-debug-ninja",
+            "configurePreset": "ucrt64-clang-x86-debug-ninja"
         },
         {
-            "name": "ucrt-clang-x86-release",
-            "description": "MSYS2 UCRT Clang",
-            "displayName": "UCRT Clang x86-release",
-            "configurePreset": "ucrt-clang-x86-release"
+            "name": "ucrt64-clang-x86-release-ninja",
+            "description": "MSYS2 UCRT64 Clang",
+            "displayName": "build-ucrt64-clang-x86-release-ninja",
+            "configurePreset": "ucrt64-clang-x86-release-ninja"
         },
         {
-            "name": "ucrt-clang-x64-debug-sccache",
-            "description": "MSYS2 UCRT Clang | Need sccache",
-            "displayName": "UCRT Clang x64-Debug sccache",
-            "configurePreset": "ucrt-clang-x64-debug-sccache"
+            "name": "ucrt64-clang-x64-debug-ninja-sccache",
+            "description": "MSYS2 UCRT64 Clang | Need sccache",
+            "displayName": "build-ucrt64-clang-x64-debug-ninja-sccache",
+            "configurePreset": "ucrt64-clang-x64-debug-ninja-sccache"
         },
         {
-            "name": "ucrt-clang-x64-release-sccache",
-            "description": "MSYS2 UCRT Clang | Need sccache",
-            "displayName": "UCRT Clang x64-Release sccache",
-            "configurePreset": "ucrt-clang-x64-release-sccache"
+            "name": "ucrt64-clang-x64-release-ninja-sccache",
+            "description": "MSYS2 UCRT64 Clang | Need sccache",
+            "displayName": "build-ucrt64-clang-x64-release-ninja-sccache",
+            "configurePreset": "ucrt64-clang-x64-release-ninja-sccache"
         },
         {
-            "name": "ucrt-clang-x86-debug-sccache",
-            "description": "MSYS2 UCRT Clang | Need sccache",
-            "displayName": "UCRT Clang x86-Debug sccache",
-            "configurePreset": "ucrt-clang-x86-debug-sccache"
+            "name": "ucrt64-clang-x86-debug-ninja-sccache",
+            "description": "MSYS2 UCRT64 Clang | Need sccache",
+            "displayName": "build-ucrt64-clang-x86-debug-ninja-sccache",
+            "configurePreset": "ucrt64-clang-x86-debug-ninja-sccache"
         },
         {
-            "name": "ucrt-clang-x86-release-sccache",
-            "description": "MSYS2 UCRT Clang | Need sccache",
-            "displayName": "UCRT Clang x86-Release sccache",
-            "configurePreset": "ucrt-clang-x86-release-sccache"
+            "name": "ucrt64-clang-x86-release-ninja-sccache",
+            "description": "MSYS2 UCRT64 Clang | Need sccache",
+            "displayName": "build-ucrt64-clang-x86-release-ninja-sccache",
+            "configurePreset": "ucrt64-clang-x86-release-ninja-sccache"
         },
         {
-            "name": "ucrt-clang-x64-debug-ccache",
-            "description": "MSYS2 UCRT Clang | Need ccache",
-            "displayName": "UCRT Clang x64-Debug ccache",
-            "configurePreset": "ucrt-clang-x64-debug-ccache"
+            "name": "ucrt64-clang-x64-debug-ninja-ccache",
+            "description": "MSYS2 UCRT64 Clang | Need ccache",
+            "displayName": "build-ucrt64-clang-x64-debug-ninja-ccache",
+            "configurePreset": "ucrt64-clang-x64-debug-ninja-ccache"
         },
         {
-            "name": "ucrt-clang-x64-release-ccache",
-            "description": "MSYS2 UCRT Clang | Need ccache",
-            "displayName": "UCRT Clang x64-Release ccache",
-            "configurePreset": "ucrt-clang-x64-release-ccache"
+            "name": "ucrt64-clang-x64-release-ninja-ccache",
+            "description": "MSYS2 UCRT64 Clang | Need ccache",
+            "displayName": "build-ucrt64-clang-x64-release-ninja-ccache",
+            "configurePreset": "ucrt64-clang-x64-release-ninja-ccache"
         },
         {
-            "name": "ucrt-clang-x86-debug-ccache",
-            "description": "MSYS2 UCRT Clang | Need ccache",
-            "displayName": "UCRT Clang x86-Debug ccache",
-            "configurePreset": "ucrt-clang-x86-debug-ccache"
+            "name": "ucrt64-clang-x86-debug-ninja-ccache",
+            "description": "MSYS2 UCRT64 Clang | Need ccache",
+            "displayName": "build-ucrt64-clang-x86-debug-ninja-ccache",
+            "configurePreset": "ucrt64-clang-x86-debug-ninja-ccache"
         },
         {
-            "name": "ucrt-clang-x86-release-ccache",
-            "description": "MSYS2 UCRT Clang | Need ccache",
-            "displayName": "UCRT Clang x86-Release ccache",
-            "configurePreset": "ucrt-clang-x86-release-ccache"
+            "name": "ucrt64-clang-x86-release-ninja-ccache",
+            "description": "MSYS2 UCRT64 Clang | Need ccache",
+            "displayName": "build-ucrt64-clang-x86-release-ninja-ccache",
+            "configurePreset": "ucrt64-clang-x86-release-ninja-ccache"
         },
         {
-            "name": "msvc-x64-debug",
+            "name": "msvc-x64-debug-ninja",
             "description": "Visual Studio",
-            "displayName": "MSVC x64-debug",
-            "configurePreset": "msvc-x64-debug"
+            "displayName": "build-MSVC x64-debug",
+            "configurePreset": "msvc-x64-debug-ninja"
         },
         {
-            "name": "msvc-x64-release",
+            "name": "msvc-x64-release-ninja",
             "description": "Visual Studio",
-            "displayName": "MSVC x64-release",
-            "configurePreset": "msvc-x64-release"
+            "displayName": "build-MSVC x64-release",
+            "configurePreset": "msvc-x64-release-ninja"
         },
         {
-            "name": "msvc-x86-debug",
+            "name": "msvc-x86-debug-ninja",
             "description": "Visual Studio",
-            "displayName": "MSVC x86-debug",
-            "configurePreset": "msvc-x86-debug"
+            "displayName": "build-MSVC x86-debug",
+            "configurePreset": "msvc-x86-debug-ninja"
         },
         {
-            "name": "msvc-x86-release",
+            "name": "msvc-x86-release-ninja",
             "description": "Visual Studio",
-            "displayName": "MSVC x86-release",
-            "configurePreset": "msvc-x86-release"
+            "displayName": "build-MSVC x86-release",
+            "configurePreset": "msvc-x86-release-ninja"
         },
         {
-            "name": "msvc-x64-debug-sccache",
+            "name": "msvc-x64-debug-msbuild",
+            "description": "Visual Studio | MSBuild(Visual Studio 18 2026)",
+            "displayName": "build-MSVC x64-debug",
+            "configurePreset": "msvc-x64-debug-msbuild",
+            "configuration": "Debug"
+        },
+        {
+            "name": "msvc-x64-release-msbuild",
+            "description": "Visual Studio | MSBuild(Visual Studio 18 2026)",
+            "displayName": "build-MSVC x64-release",
+            "configurePreset": "msvc-x64-release-msbuild",
+            "configuration": "Debug"
+        },
+        {
+            "name": "msvc-x86-debug-msbuild",
+            "description": "Visual Studio | MSBuild(Visual Studio 18 2026)",
+            "displayName": "build-MSVC x86-debug",
+            "configurePreset": "msvc-x86-debug-msbuild",
+            "configuration": "Debug"
+        },
+        {
+            "name": "msvc-x86-release-msbuild",
+            "description": "Visual Studio | MSBuild(Visual Studio 18 2026)",
+            "displayName": "build-MSVC x86-release",
+            "configurePreset": "msvc-x86-release-msbuild",
+            "configuration": "Debug"
+        },
+        {
+            "name": "msvc-x64-debug-ninja-sccache",
             "description": "Visual Studio | Need Sccache",
-            "displayName": "MSVC x64-Debug sccache",
-            "configurePreset": "msvc-x64-debug-sccache"
+            "displayName": "build-MSVC x64-Debug sccache",
+            "configurePreset": "msvc-x64-debug-ninja-sccache"
         },
         {
-            "name": "msvc-x64-release-sccache",
+            "name": "msvc-x64-release-ninja-sccache",
             "description": "Visual Studio | Need Sccache",
-            "displayName": "MSVC x64-Release sccache",
-            "configurePreset": "msvc-x64-release-sccache"
+            "displayName": "build-MSVC x64-Release sccache",
+            "configurePreset": "msvc-x64-release-ninja-sccache"
         },
         {
-            "name": "msvc-x86-debug-sccache",
+            "name": "msvc-x86-debug-ninja-sccache",
             "description": "Visual Studio | Need Sccache",
-            "displayName": "MSVC x86-Debug sccache",
-            "configurePreset": "msvc-x86-debug-sccache"
+            "displayName": "build-MSVC x86-Debug sccache",
+            "configurePreset": "msvc-x86-debug-ninja-sccache"
         },
         {
-            "name": "msvc-x86-release-sccache",
+            "name": "msvc-x86-release-ninja-sccache",
             "description": "Visual Studio | Need Sccache",
-            "displayName": "MSVC x86-Release sccache",
-            "configurePreset": "msvc-x86-release-sccache"
+            "displayName": "build-MSVC x86-Release sccache",
+            "configurePreset": "msvc-x86-release-ninja-sccache"
         },
         {
-            "name": "ucrt-gcc-x64-debug",
-            "description": "UCRT GCC",
-            "displayName": "UCRT GCC x64-debug",
-            "configurePreset": "ucrt-gcc-x64-debug"
+            "name": "ucrt64-gcc-x64-debug-ninja",
+            "description": "UCRT64 GCC",
+            "displayName": "build-ucrt64-gcc-x64-debug-ninja",
+            "configurePreset": "ucrt64-gcc-x64-debug-ninja"
         },
         {
-            "name": "ucrt-gcc-x64-release",
-            "description": "UCRT GCC",
-            "displayName": "UCRT GCC x64-release",
-            "configurePreset": "ucrt-gcc-x64-release"
+            "name": "ucrt64-gcc-x64-release-ninja",
+            "description": "UCRT64 GCC",
+            "displayName": "build-ucrt64-gcc-x64-release-ninja",
+            "configurePreset": "ucrt64-gcc-x64-release-ninja"
         },
         {
-            "name": "ucrt-gcc-x86-debug",
-            "description": "UCRT GCC",
-            "displayName": "UCRT GCC x86-debug",
-            "configurePreset": "ucrt-gcc-x86-debug"
+            "name": "ucrt64-gcc-x86-debug-ninja",
+            "description": "UCRT64 GCC",
+            "displayName": "build-ucrt64-gcc-x86-debug-ninja",
+            "configurePreset": "ucrt64-gcc-x86-debug-ninja"
         },
         {
-            "name": "ucrt-gcc-x86-release",
-            "description": "UCRT GCC",
-            "displayName": "UCRT GCC x86-release",
-            "configurePreset": "ucrt-gcc-x86-release"
+            "name": "ucrt64-gcc-x86-release-ninja",
+            "description": "UCRT64 GCC",
+            "displayName": "build-ucrt64-gcc-x86-release-ninja",
+            "configurePreset": "ucrt64-gcc-x86-release-ninja"
         },
         {
-            "name": "ucrt-gcc-x64-debug-sccache",
-            "description": "MSYS2 UCRT GCC | Need sccache",
-            "displayName": "UCRT GCC x64-Debug sccache",
-            "configurePreset": "ucrt-gcc-x64-debug-sccache"
+            "name": "ucrt64-gcc-x64-debug-ninja-sccache",
+            "description": "MSYS2 UCRT64 GCC | Need sccache",
+            "displayName": "build-ucrt64-gcc-x64-debug-ninja-sccache",
+            "configurePreset": "ucrt64-gcc-x64-debug-ninja-sccache"
         },
         {
-            "name": "ucrt-gcc-x64-release-sccache",
-            "description": "MSYS2 UCRT GCC | Need sccache",
-            "displayName": "UCRT GCC x64-Release sccache",
-            "configurePreset": "ucrt-gcc-x64-release-sccache"
+            "name": "ucrt64-gcc-x64-release-ninja-sccache",
+            "description": "MSYS2 UCRT64 GCC | Need sccache",
+            "displayName": "build-ucrt64-gcc-x64-release-ninja-sccache",
+            "configurePreset": "ucrt64-gcc-x64-release-ninja-sccache"
         },
         {
-            "name": "ucrt-gcc-x86-debug-sccache",
-            "description": "MSYS2 UCRT GCC | Need sccache",
-            "displayName": "UCRT GCC x86-Debug sccache",
-            "configurePreset": "ucrt-gcc-x86-debug-sccache"
+            "name": "ucrt64-gcc-x86-debug-ninja-sccache",
+            "description": "MSYS2 UCRT64 GCC | Need sccache",
+            "displayName": "build-ucrt64-gcc-x86-debug-ninja-sccache",
+            "configurePreset": "ucrt64-gcc-x86-debug-ninja-sccache"
         },
         {
-            "name": "ucrt-gcc-x86-release-sccache",
-            "description": "MSYS2 UCRT GCC | Need sccache",
-            "displayName": "UCRT GCC x86-Release sccache",
-            "configurePreset": "ucrt-gcc-x86-release-sccache"
+            "name": "ucrt64-gcc-x86-release-ninja-sccache",
+            "description": "MSYS2 UCRT64 GCC | Need sccache",
+            "displayName": "build-ucrt64-gcc-x86-release-ninja-sccache",
+            "configurePreset": "ucrt64-gcc-x86-release-ninja-sccache"
         },
         {
-            "name": "ucrt-gcc-x64-debug-ccache",
-            "description": "MSYS2 UCRT GCC | Need ccache",
-            "displayName": "UCRT GCC x64-Debug ccache",
-            "configurePreset": "ucrt-gcc-x64-debug-ccache"
+            "name": "ucrt64-gcc-x64-debug-ninja-ccache",
+            "description": "MSYS2 UCRT64 GCC | Need ccache",
+            "displayName": "build-ucrt64-gcc-x64-debug-ninja-ccache",
+            "configurePreset": "ucrt64-gcc-x64-debug-ninja-ccache"
         },
         {
-            "name": "ucrt-gcc-x64-release-ccache",
-            "description": "MSYS2 UCRT GCC | Need ccache",
-            "displayName": "UCRT GCC x64-Release ccache",
-            "configurePreset": "ucrt-gcc-x64-release-ccache"
+            "name": "ucrt64-gcc-x64-release-ninja-ccache",
+            "description": "MSYS2 UCRT64 GCC | Need ccache",
+            "displayName": "build-ucrt64-gcc-x64-release-ninja-ccache",
+            "configurePreset": "ucrt64-gcc-x64-release-ninja-ccache"
         },
         {
-            "name": "ucrt-gcc-x86-debug-ccache",
-            "description": "MSYS2 UCRT GCC | Need ccache",
-            "displayName": "UCRT GCC x86-Debug ccache",
-            "configurePreset": "ucrt-gcc-x86-debug-ccache"
+            "name": "ucrt64-gcc-x86-debug-ninja-ccache",
+            "description": "MSYS2 UCRT64 GCC | Need ccache",
+            "displayName": "build-ucrt64-gcc-x86-debug-ninja-ccache",
+            "configurePreset": "ucrt64-gcc-x86-debug-ninja-ccache"
         },
         {
-            "name": "ucrt-gcc-x86-release-ccache",
-            "description": "MSYS2 UCRT GCC | Need ccache",
-            "displayName": "UCRT GCC x86-Release ccache",
-            "configurePreset": "ucrt-gcc-x86-release-ccache"
+            "name": "ucrt64-gcc-x86-release-ninja-ccache",
+            "description": "MSYS2 UCRT64 GCC | Need ccache",
+            "displayName": "build-ucrt64-gcc-x86-release-ninja-ccache",
+            "configurePreset": "ucrt64-gcc-x86-release-ninja-ccache"
         }
     ],
     "testPresets": [
@@ -722,772 +799,908 @@
             }
         },
         {
-            "name": "ucrt-clang-x64-debug-ctest",
-            "configurePreset": "ucrt-clang-x64-debug",
+            "name": "ucrt64-clang-x64-debug-ninja",
+            "displayName": "ctest-ucrt64-clang-x64-debug-ninja",
+            "configurePreset": "ucrt64-clang-x64-debug-ninja",
             "inherits": "ctest-base"
         },
         {
-            "name": "ucrt-clang-x64-release-ctest",
-            "configurePreset": "ucrt-clang-x64-release",
+            "name": "ucrt64-clang-x64-release-ninja",
+            "displayName": "ctest-ucrt64-clang-x64-release-ninja",
+            "configurePreset": "ucrt64-clang-x64-release-ninja",
             "inherits": "ctest-base"
         },
         {
-            "name": "ucrt-clang-x86-debug-ctest",
-            "configurePreset": "ucrt-clang-x86-debug",
+            "name": "ucrt64-clang-x86-debug-ninja",
+            "displayName": "ctest-ucrt64-clang-x86-debug-ninja",
+            "configurePreset": "ucrt64-clang-x86-debug-ninja",
             "inherits": "ctest-base"
         },
         {
-            "name": "ucrt-clang-x86-release-ctest",
-            "configurePreset": "ucrt-clang-x86-release",
+            "name": "ucrt64-clang-x86-release-ninja",
+            "displayName": "ctest-ucrt64-clang-x86-release-ninja",
+            "configurePreset": "ucrt64-clang-x86-release-ninja",
             "inherits": "ctest-base"
         },
         {
-            "name": "ucrt-clang-x64-debug-sccache-ctest",
-            "configurePreset": "ucrt-clang-x64-debug-sccache",
+            "name": "ucrt64-clang-x64-debug-ninja-sccache",
+            "displayName": "ctest-ucrt64-clang-x64-debug-ninja-sccache",
+            "configurePreset": "ucrt64-clang-x64-debug-ninja-sccache",
             "inherits": "ctest-base"
         },
         {
-            "name": "ucrt-clang-x64-release-sccache-ctest",
-            "configurePreset": "ucrt-clang-x64-release-sccache",
+            "name": "ucrt64-clang-x64-release-ninja-sccache",
+            "displayName": "ctest-ucrt64-clang-x64-release-ninja-sccache",
+            "configurePreset": "ucrt64-clang-x64-release-ninja-sccache",
             "inherits": "ctest-base"
         },
         {
-            "name": "ucrt-clang-x86-debug-sccache-ctest",
-            "configurePreset": "ucrt-clang-x86-debug-sccache",
+            "name": "ucrt64-clang-x86-debug-ninja-sccache",
+            "displayName": "ctest-ucrt64-clang-x86-debug-ninja-sccache",
+            "configurePreset": "ucrt64-clang-x86-debug-ninja-sccache",
             "inherits": "ctest-base"
         },
         {
-            "name": "ucrt-clang-x86-release-sccache-ctest",
-            "configurePreset": "ucrt-clang-x86-release-sccache",
+            "name": "ucrt64-clang-x86-release-ninja-sccache",
+            "displayName": "ctest-ucrt64-clang-x86-release-ninja-sccache",
+            "configurePreset": "ucrt64-clang-x86-release-ninja-sccache",
             "inherits": "ctest-base"
         },
         {
-            "name": "ucrt-clang-x64-debug-ccache-ctest",
-            "configurePreset": "ucrt-clang-x64-debug-ccache",
+            "name": "ucrt64-clang-x64-debug-ninja-ccache",
+            "displayName": "ctest-ucrt64-clang-x64-debug-ninja-ccache",
+            "configurePreset": "ucrt64-clang-x64-debug-ninja-ccache",
             "inherits": "ctest-base"
         },
         {
-            "name": "ucrt-clang-x64-release-ccache-ctest",
-            "configurePreset": "ucrt-clang-x64-release-ccache",
+            "name": "ucrt64-clang-x64-release-ninja-ccache",
+            "displayName": "ctest-ucrt64-clang-x64-release-ninja-ccache",
+            "configurePreset": "ucrt64-clang-x64-release-ninja-ccache",
             "inherits": "ctest-base"
         },
         {
-            "name": "ucrt-clang-x86-debug-ccache-ctest",
-            "configurePreset": "ucrt-clang-x86-debug-ccache",
+            "name": "ucrt64-clang-x86-debug-ninja-ccache",
+            "displayName": "ctest-ucrt64-clang-x86-debug-ninja-ccache",
+            "configurePreset": "ucrt64-clang-x86-debug-ninja-ccache",
             "inherits": "ctest-base"
         },
         {
-            "name": "ucrt-clang-x86-release-ccache-ctest",
-            "configurePreset": "ucrt-clang-x86-release-ccache",
+            "name": "ucrt64-clang-x86-release-ninja-ccache",
+            "displayName": "ctest-ucrt64-clang-x86-release-ninja-ccache",
+            "configurePreset": "ucrt64-clang-x86-release-ninja-ccache",
             "inherits": "ctest-base"
         },
         {
-            "name": "msvc-x64-debug-ctest",
-            "configurePreset": "msvc-x64-debug",
+            "name": "msvc-x64-debug-ninja",
+            "displayName": "ctest-msvc-x64-debug-ninja",
+            "configurePreset": "msvc-x64-debug-ninja",
             "inherits": "ctest-base"
         },
         {
-            "name": "msvc-x64-release-ctest",
-            "configurePreset": "msvc-x64-release",
+            "name": "msvc-x64-release-ninja",
+            "displayName": "ctest-msvc-x64-release-ninja",
+            "configurePreset": "msvc-x64-release-ninja",
             "inherits": "ctest-base"
         },
         {
-            "name": "msvc-x86-debug-ctest",
-            "configurePreset": "msvc-x86-debug",
+            "name": "msvc-x86-debug-ninja",
+            "displayName": "ctest-msvc-x86-debug-ninja",
+            "configurePreset": "msvc-x86-debug-ninja",
             "inherits": "ctest-base"
         },
         {
-            "name": "msvc-x86-release-ctest",
-            "configurePreset": "msvc-x86-release",
+            "name": "msvc-x86-release-ninja",
+            "displayName": "ctest-msvc-x86-release-ninja",
+            "configurePreset": "msvc-x86-release-ninja",
             "inherits": "ctest-base"
         },
         {
-            "name": "msvc-x64-debug-sccache-ctest",
-            "configurePreset": "msvc-x64-debug-sccache",
+            "name": "msvc-x64-debug-msbuild",
+            "displayName": "ctest-msvc-x64-debug-msbuild",
+            "configurePreset": "msvc-x64-debug-msbuild",
+            "inherits": "ctest-base",
+            "configuration": "Debug"
+        },
+        {
+            "name": "msvc-x64-release-msbuild",
+            "displayName": "ctest-msvc-x64-release-msbuild",
+            "configurePreset": "msvc-x64-release-msbuild",
+            "inherits": "ctest-base",
+            "configuration": "Debug"
+        },
+        {
+            "name": "msvc-x86-debug-msbuild",
+            "displayName": "ctest-msvc-x86-debug-msbuild",
+            "configurePreset": "msvc-x86-debug-msbuild",
+            "inherits": "ctest-base",
+            "configuration": "Debug"
+        },
+        {
+            "name": "msvc-x86-release-msbuild",
+            "displayName": "ctest-msvc-x86-release-msbuild",
+            "configurePreset": "msvc-x86-release-msbuild",
+            "inherits": "ctest-base",
+            "configuration": "Debug"
+        },
+        {
+            "name": "msvc-x64-debug-ninja-sccache",
+            "displayName": "ctest-msvc-x64-debug-ninja-sccache",
+            "configurePreset": "msvc-x64-debug-ninja-sccache",
             "inherits": "ctest-base"
         },
         {
-            "name": "msvc-x64-release-sccache-ctest",
-            "configurePreset": "msvc-x64-release-sccache",
+            "name": "msvc-x64-release-ninja-sccache",
+            "displayName": "ctest-msvc-x64-release-ninja-sccache",
+            "configurePreset": "msvc-x64-release-ninja-sccache",
             "inherits": "ctest-base"
         },
         {
-            "name": "msvc-x86-debug-sccache-ctest",
-            "configurePreset": "msvc-x86-debug-sccache",
+            "name": "msvc-x86-debug-ninja-sccache",
+            "displayName": "ctest-msvc-x86-debug-ninja-sccache",
+            "configurePreset": "msvc-x86-debug-ninja-sccache",
             "inherits": "ctest-base"
         },
         {
-            "name": "msvc-x86-release-sccache-ctest",
-            "configurePreset": "msvc-x86-release-sccache",
+            "name": "msvc-x86-release-ninja-sccache",
+            "displayName": "ctest-msvc-x86-release-ninja-sccache",
+            "configurePreset": "msvc-x86-release-ninja-sccache",
             "inherits": "ctest-base"
         },
         {
-            "name": "ucrt-gcc-x64-debug-ctest",
-            "configurePreset": "ucrt-gcc-x64-debug",
+            "name": "ucrt64-gcc-x64-debug-ninja",
+            "displayName": "ctest-ucrt64-gcc-x64-debug-ninja",
+            "configurePreset": "ucrt64-gcc-x64-debug-ninja",
             "inherits": "ctest-base"
         },
         {
-            "name": "ucrt-gcc-x64-release-ctest",
-            "configurePreset": "ucrt-gcc-x64-release",
+            "name": "ucrt64-gcc-x64-release-ninja",
+            "displayName": "ctest-ucrt64-gcc-x64-release-ninja",
+            "configurePreset": "ucrt64-gcc-x64-release-ninja",
             "inherits": "ctest-base"
         },
         {
-            "name": "ucrt-gcc-x86-debug-ctest",
-            "configurePreset": "ucrt-gcc-x86-debug",
+            "name": "ucrt64-gcc-x86-debug-ninja",
+            "displayName": "ctest-ucrt64-gcc-x86-debug-ninja",
+            "configurePreset": "ucrt64-gcc-x86-debug-ninja",
             "inherits": "ctest-base"
         },
         {
-            "name": "ucrt-gcc-x86-release-ctest",
-            "configurePreset": "ucrt-gcc-x86-release",
+            "name": "ucrt64-gcc-x86-release-ninja",
+            "displayName": "ctest-ucrt64-gcc-x86-release-ninja",
+            "configurePreset": "ucrt64-gcc-x86-release-ninja",
             "inherits": "ctest-base"
         },
         {
-            "name": "ucrt-gcc-x64-debug-sccache-ctest",
-            "configurePreset": "ucrt-gcc-x64-debug-sccache",
+            "name": "ucrt64-gcc-x64-debug-ninja-sccache",
+            "displayName": "ctest-ucrt64-gcc-x64-debug-ninja-sccache",
+            "configurePreset": "ucrt64-gcc-x64-debug-ninja-sccache",
             "inherits": "ctest-base"
         },
         {
-            "name": "ucrt-gcc-x64-release-sccache-ctest",
-            "configurePreset": "ucrt-gcc-x64-release-sccache",
+            "name": "ucrt64-gcc-x64-release-ninja-sccache",
+            "displayName": "ctest-ucrt64-gcc-x64-release-ninja-sccache",
+            "configurePreset": "ucrt64-gcc-x64-release-ninja-sccache",
             "inherits": "ctest-base"
         },
         {
-            "name": "ucrt-gcc-x86-debug-sccache-ctest",
-            "configurePreset": "ucrt-gcc-x86-debug-sccache",
+            "name": "ucrt64-gcc-x86-debug-ninja-sccache",
+            "displayName": "ctest-ucrt64-gcc-x86-debug-ninja-sccache",
+            "configurePreset": "ucrt64-gcc-x86-debug-ninja-sccache",
             "inherits": "ctest-base"
         },
         {
-            "name": "ucrt-gcc-x86-release-sccache-ctest",
-            "configurePreset": "ucrt-gcc-x86-release-sccache",
+            "name": "ucrt64-gcc-x86-release-ninja-sccache",
+            "displayName": "ctest-ucrt64-gcc-x86-release-ninja-sccache",
+            "configurePreset": "ucrt64-gcc-x86-release-ninja-sccache",
             "inherits": "ctest-base"
         },
         {
-            "name": "ucrt-gcc-x64-debug-ccache-ctest",
-            "configurePreset": "ucrt-gcc-x64-debug-ccache",
+            "name": "ucrt64-gcc-x64-debug-ninja-ccache",
+            "displayName": "ctest-ucrt64-gcc-x64-debug-ninja-ccache",
+            "configurePreset": "ucrt64-gcc-x64-debug-ninja-ccache",
             "inherits": "ctest-base"
         },
         {
-            "name": "ucrt-gcc-x64-release-ccache-ctest",
-            "configurePreset": "ucrt-gcc-x64-release-ccache",
+            "name": "ucrt64-gcc-x64-release-ninja-ccache",
+            "displayName": "ctest-ucrt64-gcc-x64-release-ninja-ccache",
+            "configurePreset": "ucrt64-gcc-x64-release-ninja-ccache",
             "inherits": "ctest-base"
         },
         {
-            "name": "ucrt-gcc-x86-debug-ccache-ctest",
-            "configurePreset": "ucrt-gcc-x86-debug-ccache",
+            "name": "ucrt64-gcc-x86-debug-ninja-ccache",
+            "displayName": "ctest-ucrt64-gcc-x86-debug-ninja-ccache",
+            "configurePreset": "ucrt64-gcc-x86-debug-ninja-ccache",
             "inherits": "ctest-base"
         },
         {
-            "name": "ucrt-gcc-x86-release-ccache-ctest",
-            "configurePreset": "ucrt-gcc-x86-release-ccache",
+            "name": "ucrt64-gcc-x86-release-ninja-ccache",
+            "displayName": "ctest-ucrt64-gcc-x86-release-ninja-ccache",
+            "configurePreset": "ucrt64-gcc-x86-release-ninja-ccache",
             "inherits": "ctest-base"
         }
     ],
     "workflowPresets": [
         {
-            "name": "workflow-msvc-x64-release",
+            "name": "workflow-msvc-x64-release-ninja",
             "description": "Visual Studio",
-            "displayName": "MSVC x64-Release",
+            "displayName": "wf-msvc-x64-release-ninja",
             "steps": [
                 {
                     "type": "configure",
-                    "name": "msvc-x64-release"
+                    "name": "msvc-x64-release-ninja"
                 },
                 {
                     "type": "build",
-                    "name": "msvc-x64-release"
+                    "name": "msvc-x64-release-ninja"
                 },
                 {
                     "type": "test",
-                    "name": "msvc-x64-release-ctest"
+                    "name": "msvc-x64-release-ninja"
                 }
             ]
         },
         {
-            "name": "workflow-msvc-x64-debug",
+            "name": "workflow-msvc-x64-debug-ninja",
             "description": "Visual Studio",
-            "displayName": "MSVC x64-Debug",
+            "displayName": "wf-msvc-x64-debug-ninja",
             "steps": [
                 {
                     "type": "configure",
-                    "name": "msvc-x64-debug"
+                    "name": "msvc-x64-debug-ninja"
                 },
                 {
                     "type": "build",
-                    "name": "msvc-x64-debug"
+                    "name": "msvc-x64-debug-ninja"
                 },
                 {
                     "type": "test",
-                    "name": "msvc-x64-debug-ctest"
+                    "name": "msvc-x64-debug-ninja"
                 }
             ]
         },
         {
-            "name": "workflow-msvc-x86-debug",
+            "name": "workflow-msvc-x86-debug-ninja",
             "description": "Visual Studio",
-            "displayName": "MSVC x86 Debug",
+            "displayName": "wf-msvc-x86-debug-ninja",
             "steps": [
                 {
                     "type": "configure",
-                    "name": "msvc-x86-debug"
+                    "name": "msvc-x86-debug-ninja"
                 },
                 {
                     "type": "build",
-                    "name": "msvc-x86-debug"
+                    "name": "msvc-x86-debug-ninja"
                 },
                 {
                     "type": "test",
-                    "name": "msvc-x86-debug-ctest"
+                    "name": "msvc-x86-debug-ninja"
                 }
             ]
         },
         {
-            "name": "workflow-msvc-x86-release",
+            "name": "workflow-msvc-x86-release-ninja",
             "description": "Visual Studio",
-            "displayName": "MSVC x86 Release",
+            "displayName": "wf-msvc-x86-release-ninja",
             "steps": [
                 {
                     "type": "configure",
-                    "name": "msvc-x86-release"
+                    "name": "msvc-x86-release-ninja"
                 },
                 {
                     "type": "build",
-                    "name": "msvc-x86-release"
+                    "name": "msvc-x86-release-ninja"
                 },
                 {
                     "type": "test",
-                    "name": "msvc-x86-release-ctest"
+                    "name": "msvc-x86-release-ninja"
                 }
             ]
         },
         {
-            "name": "workflow-msvc-x64-debug-sccache",
+            "name": "workflow-msvc-x64-release-msbuild",
+            "description": "Visual Studio | MSBuild(Visual Studio 18 2026)",
+            "displayName": "wf-msvc-x64-release-msbuild",
+            "steps": [
+                {
+                    "type": "configure",
+                    "name": "msvc-x64-release-msbuild"
+                },
+                {
+                    "type": "build",
+                    "name": "msvc-x64-release-msbuild"
+                },
+                {
+                    "type": "test",
+                    "name": "msvc-x64-release-msbuild"
+                }
+            ]
+        },
+        {
+            "name": "workflow-msvc-x64-debug-msbuild",
+            "description": "Visual Studio | MSBuild(Visual Studio 18 2026)",
+            "displayName": "wf-msvc-x64-debug-msbuild",
+            "steps": [
+                {
+                    "type": "configure",
+                    "name": "msvc-x64-debug-msbuild"
+                },
+                {
+                    "type": "build",
+                    "name": "msvc-x64-debug-msbuild"
+                },
+                {
+                    "type": "test",
+                    "name": "msvc-x64-debug-msbuild"
+                }
+            ]
+        },
+        {
+            "name": "workflow-msvc-x86-debug-msbuild",
+            "description": "Visual Studio | MSBuild(Visual Studio 18 2026)",
+            "displayName": "wf-msvc-x86-debug-msbuild",
+            "steps": [
+                {
+                    "type": "configure",
+                    "name": "msvc-x86-debug-msbuild"
+                },
+                {
+                    "type": "build",
+                    "name": "msvc-x86-debug-msbuild"
+                },
+                {
+                    "type": "test",
+                    "name": "msvc-x86-debug-msbuild"
+                }
+            ]
+        },
+        {
+            "name": "workflow-msvc-x86-release-msbuild",
+            "description": "Visual Studio | MSBuild(Visual Studio 18 2026)",
+            "displayName": "wf-msvc-x86-release-msbuild",
+            "steps": [
+                {
+                    "type": "configure",
+                    "name": "msvc-x86-release-msbuild"
+                },
+                {
+                    "type": "build",
+                    "name": "msvc-x86-release-msbuild"
+                },
+                {
+                    "type": "test",
+                    "name": "msvc-x86-release-msbuild"
+                }
+            ]
+        },
+        {
+            "name": "workflow-msvc-x64-debug-ninja-sccache",
             "description": "Visual Studio | Need Sccache",
-            "displayName": "MSVC x64-Debug sccache",
+            "displayName": "wf-msvc-x64-debug-ninja-sccache",
             "steps": [
                 {
                     "type": "configure",
-                    "name": "msvc-x64-debug-sccache"
+                    "name": "msvc-x64-debug-ninja-sccache"
                 },
                 {
                     "type": "build",
-                    "name": "msvc-x64-debug-sccache"
+                    "name": "msvc-x64-debug-ninja-sccache"
                 },
                 {
                     "type": "test",
-                    "name": "msvc-x64-debug-sccache-ctest"
+                    "name": "msvc-x64-debug-ninja-sccache"
                 }
             ]
         },
         {
-            "name": "workflow-msvc-x64-release-sccache",
+            "name": "workflow-msvc-x64-release-ninja-sccache",
             "description": "Visual Studio | Need Sccache",
-            "displayName": "MSVC x64-Release sccache",
+            "displayName": "wf-msvc-x64-release-ninja-sccache",
             "steps": [
                 {
                     "type": "configure",
-                    "name": "msvc-x64-release-sccache"
+                    "name": "msvc-x64-release-ninja-sccache"
                 },
                 {
                     "type": "build",
-                    "name": "msvc-x64-release-sccache"
+                    "name": "msvc-x64-release-ninja-sccache"
                 },
                 {
                     "type": "test",
-                    "name": "msvc-x64-release-sccache-ctest"
+                    "name": "msvc-x64-release-ninja-sccache"
                 }
             ]
         },
         {
-            "name": "workflow-msvc-x86-debug-sccache",
+            "name": "workflow-msvc-x86-debug-ninja-sccache",
             "description": "Visual Studio | Need Sccache",
-            "displayName": "MSVC x86 Debug sccache",
+            "displayName": "wf-msvc-x86-debug-ninja-sccache",
             "steps": [
                 {
                     "type": "configure",
-                    "name": "msvc-x86-debug-sccache"
+                    "name": "msvc-x86-debug-ninja-sccache"
                 },
                 {
                     "type": "build",
-                    "name": "msvc-x86-debug-sccache"
+                    "name": "msvc-x86-debug-ninja-sccache"
                 },
                 {
                     "type": "test",
-                    "name": "msvc-x86-debug-sccache-ctest"
+                    "name": "msvc-x86-debug-ninja-sccache"
                 }
             ]
         },
         {
-            "name": "workflow-msvc-x86-release-sccache",
+            "name": "workflow-msvc-x86-release-ninja-sccache",
             "description": "Visual Studio | Need Sccache",
-            "displayName": "MSVC x86 Release sccache",
+            "displayName": "wf-msvc-x86-release-ninja-sccache",
             "steps": [
                 {
                     "type": "configure",
-                    "name": "msvc-x86-release-sccache"
+                    "name": "msvc-x86-release-ninja-sccache"
                 },
                 {
                     "type": "build",
-                    "name": "msvc-x86-release-sccache"
+                    "name": "msvc-x86-release-ninja-sccache"
                 },
                 {
                     "type": "test",
-                    "name": "msvc-x86-release-sccache-ctest"
+                    "name": "msvc-x86-release-ninja-sccache"
                 }
             ]
         },
         {
-            "name": "workflow-ucrt-clang-x64-debug",
-            "description": "MSYS2 UCRT Clang",
-            "displayName": "UCRT Clang x64-Debug",
+            "name": "workflow-ucrt64-clang-x64-debug-ninja",
+            "description": "MSYS2 UCRT64 Clang",
+            "displayName": "wf-ucrt64-clang-x64-debug-ninja",
             "steps": [
                 {
                     "type": "configure",
-                    "name": "ucrt-clang-x64-debug"
+                    "name": "ucrt64-clang-x64-debug-ninja"
                 },
                 {
                     "type": "build",
-                    "name": "ucrt-clang-x64-debug"
+                    "name": "ucrt64-clang-x64-debug-ninja"
                 },
                 {
                     "type": "test",
-                    "name": "ucrt-clang-x64-debug-ctest"
+                    "name": "ucrt64-clang-x64-debug-ninja"
                 }
             ]
         },
         {
-            "name": "workflow-ucrt-clang-x64-release",
-            "description": "MSYS2 UCRT Clang",
-            "displayName": "UCRT Clang x64-Release",
+            "name": "workflow-ucrt64-clang-x64-release-ninja",
+            "description": "MSYS2 UCRT64 Clang",
+            "displayName": "wf-ucrt64-clang-x64-release-ninja",
             "steps": [
                 {
                     "type": "configure",
-                    "name": "ucrt-clang-x64-release"
+                    "name": "ucrt64-clang-x64-release-ninja"
                 },
                 {
                     "type": "build",
-                    "name": "ucrt-clang-x64-release"
+                    "name": "ucrt64-clang-x64-release-ninja"
                 },
                 {
                     "type": "test",
-                    "name": "ucrt-clang-x64-release-ctest"
+                    "name": "ucrt64-clang-x64-release-ninja"
                 }
             ]
         },
         {
-            "name": "workflow-ucrt-clang-x86-debug",
-            "description": "MSYS2 UCRT Clang",
-            "displayName": "UCRT Clang x86-Debug",
+            "name": "workflow-ucrt64-clang-x86-debug-ninja",
+            "description": "MSYS2 UCRT64 Clang",
+            "displayName": "wf-ucrt64-clang-x86-debug-ninja",
             "steps": [
                 {
                     "type": "configure",
-                    "name": "ucrt-clang-x86-debug"
+                    "name": "ucrt64-clang-x86-debug-ninja"
                 },
                 {
                     "type": "build",
-                    "name": "ucrt-clang-x86-debug"
+                    "name": "ucrt64-clang-x86-debug-ninja"
                 },
                 {
                     "type": "test",
-                    "name": "ucrt-clang-x86-debug-ctest"
+                    "name": "ucrt64-clang-x86-debug-ninja"
                 }
             ]
         },
         {
-            "name": "workflow-ucrt-clang-x86-release",
-            "description": "MSYS2 UCRT Clang",
-            "displayName": "UCRT Clang x86-Release",
+            "name": "workflow-ucrt64-clang-x86-release-ninja",
+            "description": "MSYS2 UCRT64 Clang",
+            "displayName": "wf-ucrt64-clang-x86-release-ninja",
             "steps": [
                 {
                     "type": "configure",
-                    "name": "ucrt-clang-x86-release"
+                    "name": "ucrt64-clang-x86-release-ninja"
                 },
                 {
                     "type": "build",
-                    "name": "ucrt-clang-x86-release"
+                    "name": "ucrt64-clang-x86-release-ninja"
                 },
                 {
                     "type": "test",
-                    "name": "ucrt-clang-x86-release-ctest"
+                    "name": "ucrt64-clang-x86-release-ninja"
                 }
             ]
         },
         {
-            "name": "workflow-ucrt-clang-x64-debug-sccache",
-            "description": "MSYS2 UCRT Clang | Need Sccache",
-            "displayName": "UCRT Clang x64-Debug sccache",
+            "name": "workflow-ucrt64-clang-x64-debug-ninja-sccache",
+            "description": "MSYS2 UCRT64 Clang | Need Sccache",
+            "displayName": "wf-ucrt64-clang-x64-debug-ninja-sccache",
             "steps": [
                 {
                     "type": "configure",
-                    "name": "ucrt-clang-x64-debug-sccache"
+                    "name": "ucrt64-clang-x64-debug-ninja-sccache"
                 },
                 {
                     "type": "build",
-                    "name": "ucrt-clang-x64-debug-sccache"
+                    "name": "ucrt64-clang-x64-debug-ninja-sccache"
                 },
                 {
                     "type": "test",
-                    "name": "ucrt-clang-x64-debug-sccache-ctest"
+                    "name": "ucrt64-clang-x64-debug-ninja-sccache"
                 }
             ]
         },
         {
-            "name": "workflow-ucrt-clang-x64-release-sccache",
-            "description": "MSYS2 UCRT Clang | Need Sccache",
-            "displayName": "UCRT Clang x64-Release sccache",
+            "name": "workflow-ucrt64-clang-x64-release-ninja-sccache",
+            "description": "MSYS2 UCRT64 Clang | Need Sccache",
+            "displayName": "wf-ucrt64-clang-x64-release-ninja-sccache",
             "steps": [
                 {
                     "type": "configure",
-                    "name": "ucrt-clang-x64-release-sccache"
+                    "name": "ucrt64-clang-x64-release-ninja-sccache"
                 },
                 {
                     "type": "build",
-                    "name": "ucrt-clang-x64-release-sccache"
+                    "name": "ucrt64-clang-x64-release-ninja-sccache"
                 },
                 {
                     "type": "test",
-                    "name": "ucrt-clang-x64-release-sccache-ctest"
+                    "name": "ucrt64-clang-x64-release-ninja-sccache"
                 }
             ]
         },
         {
-            "name": "workflow-ucrt-clang-x86-debug-sccache",
-            "description": "MSYS2 UCRT Clang | Need Sccache",
-            "displayName": "UCRT Clang x86-Debug sccache",
+            "name": "workflow-ucrt64-clang-x86-debug-ninja-sccache",
+            "description": "MSYS2 UCRT64 Clang | Need Sccache",
+            "displayName": "wf-ucrt64-clang-x86-debug-ninja-sccache",
             "steps": [
                 {
                     "type": "configure",
-                    "name": "ucrt-clang-x86-debug-sccache"
+                    "name": "ucrt64-clang-x86-debug-ninja-sccache"
                 },
                 {
                     "type": "build",
-                    "name": "ucrt-clang-x86-debug-sccache"
+                    "name": "ucrt64-clang-x86-debug-ninja-sccache"
                 },
                 {
                     "type": "test",
-                    "name": "ucrt-clang-x86-debug-sccache-ctest"
+                    "name": "ucrt64-clang-x86-debug-ninja-sccache"
                 }
             ]
         },
         {
-            "name": "workflow-ucrt-clang-x86-release-sccache",
-            "description": "MSYS2 UCRT Clang | Need Sccache",
-            "displayName": "UCRT Clang x86-Release sccache",
+            "name": "workflow-ucrt64-clang-x86-release-ninja-sccache",
+            "description": "MSYS2 UCRT64 Clang | Need Sccache",
+            "displayName": "wf-ucrt64-clang-x86-release-ninja-sccache",
             "steps": [
                 {
                     "type": "configure",
-                    "name": "ucrt-clang-x86-release-sccache"
+                    "name": "ucrt64-clang-x86-release-ninja-sccache"
                 },
                 {
                     "type": "build",
-                    "name": "ucrt-clang-x86-release-sccache"
+                    "name": "ucrt64-clang-x86-release-ninja-sccache"
                 },
                 {
                     "type": "test",
-                    "name": "ucrt-clang-x86-release-sccache-ctest"
+                    "name": "ucrt64-clang-x86-release-ninja-sccache"
                 }
             ]
         },
         {
-            "name": "workflow-ucrt-clang-x64-debug-ccache",
-            "description": "MSYS2 UCRT Clang | Need ccache",
-            "displayName": "UCRT Clang x64-Debug ccache",
+            "name": "workflow-ucrt64-clang-x64-debug-ninja-ccache",
+            "description": "MSYS2 UCRT64 Clang | Need ccache",
+            "displayName": "wf-ucrt64-clang-x64-debug-ninja-ccache",
             "steps": [
                 {
                     "type": "configure",
-                    "name": "ucrt-clang-x64-debug-ccache"
+                    "name": "ucrt64-clang-x64-debug-ninja-ccache"
                 },
                 {
                     "type": "build",
-                    "name": "ucrt-clang-x64-debug-ccache"
+                    "name": "ucrt64-clang-x64-debug-ninja-ccache"
                 },
                 {
                     "type": "test",
-                    "name": "ucrt-clang-x64-debug-ccache-ctest"
+                    "name": "ucrt64-clang-x64-debug-ninja-ccache"
                 }
             ]
         },
         {
-            "name": "workflow-ucrt-clang-x64-release-ccache",
-            "description": "MSYS2 UCRT Clang | Need ccache",
-            "displayName": "UCRT Clang x64-Release ccache",
+            "name": "workflow-ucrt64-clang-x64-release-ninja-ccache",
+            "description": "MSYS2 UCRT64 Clang | Need ccache",
+            "displayName": "wf-ucrt64-clang-x64-release-ninja-ccache",
             "steps": [
                 {
                     "type": "configure",
-                    "name": "ucrt-clang-x64-release-ccache"
+                    "name": "ucrt64-clang-x64-release-ninja-ccache"
                 },
                 {
                     "type": "build",
-                    "name": "ucrt-clang-x64-release-ccache"
+                    "name": "ucrt64-clang-x64-release-ninja-ccache"
                 },
                 {
                     "type": "test",
-                    "name": "ucrt-clang-x64-release-ccache-ctest"
+                    "name": "ucrt64-clang-x64-release-ninja-ccache"
                 }
             ]
         },
         {
-            "name": "workflow-ucrt-clang-x86-debug-ccache",
-            "description": "MSYS2 UCRT Clang | Need ccache",
-            "displayName": "UCRT Clang x86-Debug ccache",
+            "name": "workflow-ucrt64-clang-x86-debug-ninja-ccache",
+            "description": "MSYS2 UCRT64 Clang | Need ccache",
+            "displayName": "wf-ucrt64-clang-x86-debug-ninja-ccache",
             "steps": [
                 {
                     "type": "configure",
-                    "name": "ucrt-clang-x86-debug-ccache"
+                    "name": "ucrt64-clang-x86-debug-ninja-ccache"
                 },
                 {
                     "type": "build",
-                    "name": "ucrt-clang-x86-debug-ccache"
+                    "name": "ucrt64-clang-x86-debug-ninja-ccache"
                 },
                 {
                     "type": "test",
-                    "name": "ucrt-clang-x86-debug-ccache-ctest"
+                    "name": "ucrt64-clang-x86-debug-ninja-ccache"
                 }
             ]
         },
         {
-            "name": "workflow-ucrt-clang-x86-release-ccache",
-            "description": "MSYS2 UCRT Clang | Need ccache",
-            "displayName": "UCRT Clang x86-Release ccache",
+            "name": "workflow-ucrt64-clang-x86-release-ninja-ccache",
+            "description": "MSYS2 UCRT64 Clang | Need ccache",
+            "displayName": "wf-ucrt64-clang-x86-release-ninja-ccache",
             "steps": [
                 {
                     "type": "configure",
-                    "name": "ucrt-clang-x86-release-ccache"
+                    "name": "ucrt64-clang-x86-release-ninja-ccache"
                 },
                 {
                     "type": "build",
-                    "name": "ucrt-clang-x86-release-ccache"
+                    "name": "ucrt64-clang-x86-release-ninja-ccache"
                 },
                 {
                     "type": "test",
-                    "name": "ucrt-clang-x86-release-ccache-ctest"
+                    "name": "ucrt64-clang-x86-release-ninja-ccache"
                 }
             ]
         },
         {
-            "name": "workflow-ucrt-gcc-x64-debug",
-            "description": "MSYS2 UCRT GCC",
-            "displayName": "UCRT GCC x64-debug",
+            "name": "workflow-ucrt64-gcc-x64-debug-ninja",
+            "description": "MSYS2 UCRT64 GCC",
+            "displayName": "wf-ucrt64-gcc-x64-debug-ninja",
             "steps": [
                 {
                     "type": "configure",
-                    "name": "ucrt-gcc-x64-debug"
+                    "name": "ucrt64-gcc-x64-debug-ninja"
                 },
                 {
                     "type": "build",
-                    "name": "ucrt-gcc-x64-debug"
+                    "name": "ucrt64-gcc-x64-debug-ninja"
                 },
                 {
                     "type": "test",
-                    "name": "ucrt-gcc-x64-debug-ctest"
+                    "name": "ucrt64-gcc-x64-debug-ninja"
                 }
             ]
         },
         {
-            "name": "workflow-ucrt-gcc-x64-release",
-            "description": "MSYS2 UCRT GCC",
-            "displayName": "UCRT GCC x64-release",
+            "name": "workflow-ucrt64-gcc-x64-release-ninja",
+            "description": "MSYS2 UCRT64 GCC",
+            "displayName": "wf-ucrt64-gcc-x64-release-ninja",
             "steps": [
                 {
                     "type": "configure",
-                    "name": "ucrt-gcc-x64-release"
+                    "name": "ucrt64-gcc-x64-release-ninja"
                 },
                 {
                     "type": "build",
-                    "name": "ucrt-gcc-x64-release"
+                    "name": "ucrt64-gcc-x64-release-ninja"
                 },
                 {
                     "type": "test",
-                    "name": "ucrt-gcc-x64-release-ctest"
+                    "name": "ucrt64-gcc-x64-release-ninja"
                 }
             ]
         },
         {
-            "name": "workflow-ucrt-gcc-x86-debug",
-            "description": "MSYS2 UCRT GCC",
-            "displayName": "UCRT GCC x86-debug",
+            "name": "workflow-ucrt64-gcc-x86-debug-ninja",
+            "description": "MSYS2 UCRT64 GCC",
+            "displayName": "wf-ucrt64-gcc-x86-debug-ninja",
             "steps": [
                 {
                     "type": "configure",
-                    "name": "ucrt-gcc-x86-debug"
+                    "name": "ucrt64-gcc-x86-debug-ninja"
                 },
                 {
                     "type": "build",
-                    "name": "ucrt-gcc-x86-debug"
+                    "name": "ucrt64-gcc-x86-debug-ninja"
                 },
                 {
                     "type": "test",
-                    "name": "ucrt-gcc-x86-debug-ctest"
+                    "name": "ucrt64-gcc-x86-debug-ninja"
                 }
             ]
         },
         {
-            "name": "workflow-ucrt-gcc-x86-release",
-            "description": "MSYS2 UCRT GCC",
-            "displayName": "UCRT GCC x86-release",
+            "name": "workflow-ucrt64-gcc-x86-release-ninja",
+            "description": "MSYS2 UCRT64 GCC",
+            "displayName": "wf-ucrt64-gcc-x86-release-ninja",
             "steps": [
                 {
                     "type": "configure",
-                    "name": "ucrt-gcc-x86-release"
+                    "name": "ucrt64-gcc-x86-release-ninja"
                 },
                 {
                     "type": "build",
-                    "name": "ucrt-gcc-x86-release"
+                    "name": "ucrt64-gcc-x86-release-ninja"
                 },
                 {
                     "type": "test",
-                    "name": "ucrt-gcc-x86-release-ctest"
+                    "name": "ucrt64-gcc-x86-release-ninja"
                 }
             ]
         },
         {
-            "name": "workflow-ucrt-gcc-x64-debug-sccache",
-            "description": "MSYS2 UCRT GCC | Need Sccache",
-            "displayName": "UCRT GCC x64-Debug sccache",
+            "name": "workflow-ucrt64-gcc-x64-debug-ninja-sccache",
+            "description": "MSYS2 UCRT64 GCC | Need Sccache",
+            "displayName": "wf-ucrt64-gcc-x64-debug-ninja-sccache",
             "steps": [
                 {
                     "type": "configure",
-                    "name": "ucrt-gcc-x64-debug-sccache"
+                    "name": "ucrt64-gcc-x64-debug-ninja-sccache"
                 },
                 {
                     "type": "build",
-                    "name": "ucrt-gcc-x64-debug-sccache"
+                    "name": "ucrt64-gcc-x64-debug-ninja-sccache"
                 },
                 {
                     "type": "test",
-                    "name": "ucrt-gcc-x64-debug-sccache-ctest"
+                    "name": "ucrt64-gcc-x64-debug-ninja-sccache"
                 }
             ]
         },
         {
-            "name": "workflow-ucrt-gcc-x64-release-sccache",
-            "description": "MSYS2 UCRT GCC | Need Sccache",
-            "displayName": "UCRT GCC x64-Release sccache",
+            "name": "workflow-ucrt64-gcc-x64-release-ninja-sccache",
+            "description": "MSYS2 UCRT64 GCC | Need Sccache",
+            "displayName": "wf-ucrt64-gcc-x64-release-ninja-sccache",
             "steps": [
                 {
                     "type": "configure",
-                    "name": "ucrt-gcc-x64-release-sccache"
+                    "name": "ucrt64-gcc-x64-release-ninja-sccache"
                 },
                 {
                     "type": "build",
-                    "name": "ucrt-gcc-x64-release-sccache"
+                    "name": "ucrt64-gcc-x64-release-ninja-sccache"
                 },
                 {
                     "type": "test",
-                    "name": "ucrt-gcc-x64-release-sccache-ctest"
+                    "name": "ucrt64-gcc-x64-release-ninja-sccache"
                 }
             ]
         },
         {
-            "name": "workflow-ucrt-gcc-x86-debug-sccache",
-            "description": "MSYS2 UCRT GCC | Need Sccache",
-            "displayName": "UCRT GCC x86-Debug sccache",
+            "name": "workflow-ucrt64-gcc-x86-debug-ninja-sccache",
+            "description": "MSYS2 UCRT64 GCC | Need Sccache",
+            "displayName": "wf-ucrt64-gcc-x86-debug-ninja-sccache",
             "steps": [
                 {
                     "type": "configure",
-                    "name": "ucrt-gcc-x86-debug-sccache"
+                    "name": "ucrt64-gcc-x86-debug-ninja-sccache"
                 },
                 {
                     "type": "build",
-                    "name": "ucrt-gcc-x86-debug-sccache"
+                    "name": "ucrt64-gcc-x86-debug-ninja-sccache"
                 },
                 {
                     "type": "test",
-                    "name": "ucrt-gcc-x86-debug-sccache-ctest"
+                    "name": "ucrt64-gcc-x86-debug-ninja-sccache"
                 }
             ]
         },
         {
-            "name": "workflow-ucrt-gcc-x86-release-sccache",
-            "description": "MSYS2 UCRT GCC | Need Sccache",
-            "displayName": "UCRT GCC x86-Release sccache",
+            "name": "workflow-ucrt64-gcc-x86-release-ninja-sccache",
+            "description": "MSYS2 UCRT64 GCC | Need Sccache",
+            "displayName": "wf-ucrt64-gcc-x86-release-ninja-sccache",
             "steps": [
                 {
                     "type": "configure",
-                    "name": "ucrt-gcc-x86-release-sccache"
+                    "name": "ucrt64-gcc-x86-release-ninja-sccache"
                 },
                 {
                     "type": "build",
-                    "name": "ucrt-gcc-x86-release-sccache"
+                    "name": "ucrt64-gcc-x86-release-ninja-sccache"
                 },
                 {
                     "type": "test",
-                    "name": "ucrt-gcc-x86-release-sccache-ctest"
+                    "name": "ucrt64-gcc-x86-release-ninja-sccache"
                 }
             ]
         },
         {
-            "name": "workflow-ucrt-gcc-x64-debug-ccache",
-            "description": "MSYS2 UCRT GCC | Need ccache",
-            "displayName": "UCRT GCC x64-Debug ccache",
+            "name": "workflow-ucrt64-gcc-x64-debug-ninja-ccache",
+            "description": "MSYS2 UCRT64 GCC | Need ccache",
+            "displayName": "wf-ucrt64-gcc-x64-debug-ninja-ccache",
             "steps": [
                 {
                     "type": "configure",
-                    "name": "ucrt-gcc-x64-debug-ccache"
+                    "name": "ucrt64-gcc-x64-debug-ninja-ccache"
                 },
                 {
                     "type": "build",
-                    "name": "ucrt-gcc-x64-debug-ccache"
+                    "name": "ucrt64-gcc-x64-debug-ninja-ccache"
                 },
                 {
                     "type": "test",
-                    "name": "ucrt-gcc-x64-debug-ccache-ctest"
+                    "name": "ucrt64-gcc-x64-debug-ninja-ccache"
                 }
             ]
         },
         {
-            "name": "workflow-ucrt-gcc-x64-release-ccache",
-            "description": "MSYS2 UCRT GCC | Need ccache",
-            "displayName": "UCRT GCC x64-Release ccache",
+            "name": "workflow-ucrt64-gcc-x64-release-ninja-ccache",
+            "description": "MSYS2 UCRT64 GCC | Need ccache",
+            "displayName": "wf-ucrt64-gcc-x64-release-ninja-ccache",
             "steps": [
                 {
                     "type": "configure",
-                    "name": "ucrt-gcc-x64-release-ccache"
+                    "name": "ucrt64-gcc-x64-release-ninja-ccache"
                 },
                 {
                     "type": "build",
-                    "name": "ucrt-gcc-x64-release-ccache"
+                    "name": "ucrt64-gcc-x64-release-ninja-ccache"
                 },
                 {
                     "type": "test",
-                    "name": "ucrt-gcc-x64-release-ccache-ctest"
+                    "name": "ucrt64-gcc-x64-release-ninja-ccache"
                 }
             ]
         },
         {
-            "name": "workflow-ucrt-gcc-x86-debug-ccache",
-            "description": "MSYS2 UCRT GCC | Need ccache",
-            "displayName": "UCRT GCC x86-Debug ccache",
+            "name": "workflow-ucrt64-gcc-x86-debug-ninja-ccache",
+            "description": "MSYS2 UCRT64 GCC | Need ccache",
+            "displayName": "wf-ucrt64-gcc-x86-debug-ninja-ccache",
             "steps": [
                 {
                     "type": "configure",
-                    "name": "ucrt-gcc-x86-debug-ccache"
+                    "name": "ucrt64-gcc-x86-debug-ninja-ccache"
                 },
                 {
                     "type": "build",
-                    "name": "ucrt-gcc-x86-debug-ccache"
+                    "name": "ucrt64-gcc-x86-debug-ninja-ccache"
                 },
                 {
                     "type": "test",
-                    "name": "ucrt-gcc-x86-debug-ccache-ctest"
+                    "name": "ucrt64-gcc-x86-debug-ninja-ccache"
                 }
             ]
         },
         {
-            "name": "workflow-ucrt-gcc-x86-release-ccache",
-            "description": "MSYS2 UCRT GCC | Need ccache",
-            "displayName": "UCRT GCC x86-Release ccache",
+            "name": "workflow-ucrt64-gcc-x86-release-ninja-ccache",
+            "description": "MSYS2 UCRT64 GCC | Need ccache",
+            "displayName": "wf-ucrt64-gcc-x86-release-ninja-ccache",
             "steps": [
                 {
                     "type": "configure",
-                    "name": "ucrt-gcc-x86-release-ccache"
+                    "name": "ucrt64-gcc-x86-release-ninja-ccache"
                 },
                 {
                     "type": "build",
-                    "name": "ucrt-gcc-x86-release-ccache"
+                    "name": "ucrt64-gcc-x86-release-ninja-ccache"
                 },
                 {
                     "type": "test",
-                    "name": "ucrt-gcc-x86-release-ccache-ctest"
+                    "name": "ucrt64-gcc-x86-release-ninja-ccache"
                 }
             ]
         }
